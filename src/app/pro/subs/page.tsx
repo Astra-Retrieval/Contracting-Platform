@@ -6,7 +6,7 @@ import { SubmitButton } from "@/components/submit-button";
 import { Badge, ButtonLink, Card, Empty, Flash, PageHeader, SectionTitle, Stars, StatusBadge, inputCls, type SearchParams } from "@/components/ui";
 import { requirePro } from "@/lib/auth";
 import { prosById } from "@/lib/data";
-import { subBillFeeLabel } from "@/lib/config";
+import { SUB_BILL_FEE_BPS, subBillFeeLabel } from "@/lib/config";
 import { money, shortDate } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
 
@@ -174,8 +174,8 @@ export default async function ProSubsPage({ searchParams }: { searchParams: Sear
                           )}
                           <p className="mt-2 text-xs text-stone-500">
                             The contractor pays your bill on the platform and the money goes straight to
-                            your Stripe account, less the {subBillFeeLabel} platform fee and Stripe&apos;s card
-                            processing.
+                            your Stripe account, less {SUB_BILL_FEE_BPS > 0 && `the ${subBillFeeLabel} platform fee and `}
+                            Stripe&apos;s card processing.
                           </p>
                         </div>
                       );

@@ -116,7 +116,7 @@ async function ProDashboard({ viewer }: { viewer: Viewer }) {
   const subscribed = ["trialing", "active"].includes(billing?.subscription_status ?? "");
 
   const checklist: [string, boolean, string, string][] = [
-    ["Complete your profile", Boolean(pro?.business_name && pro?.bio && pro?.city), "/pro/profile", "Add a bio, location and pricing"],
+    ["Complete your profile", Boolean(pro?.business_name && pro?.bio && pro?.city), "/pro/profile", "Add a bio, location, and pricing"],
     ["Add photos of your work", (photoCount ?? 0) > 0, "/pro/profile#photos", "Profiles with photos get more requests"],
     ["Start your membership", subscribed, "/pro/billing", "Free for the first 30 days"],
     ["Set up payments", Boolean(billing?.payouts_enabled), "/pro/billing", "Needed before you can send a bill"],
@@ -127,7 +127,7 @@ async function ProDashboard({ viewer }: { viewer: Viewer }) {
     <>
       <PageHeader
         title={pro?.business_name || "Your dashboard"}
-        subtitle="Leads, jobs and earnings."
+        subtitle="Leads, jobs, and earnings."
         action={<ButtonLink href={`/pros/${viewer.id}`} variant="secondary">View public profile</ButtonLink>}
       />
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">

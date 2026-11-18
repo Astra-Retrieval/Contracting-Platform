@@ -5,8 +5,8 @@ import { requireCustomer, requirePro } from "@/lib/auth";
 import { APP_NAME, APP_URL, PRO_MONTHLY_PRICE_CENTS, TRIAL_DAYS, platformFee, subBillFee } from "@/lib/config";
 import { displayName, notify, projectTitle } from "@/lib/email";
 import { flash, money, text, toCents } from "@/lib/format";
-import { createProAccount, proAccountSetupLink } from "@/lib/payments";
-import { getStripe, isStripeConfigured } from "@/lib/stripe";
+import { createProAccount, proAccountSetupLink, proAccountSetupSession, proDashboardLink } from "@/lib/payments";
+import { STRIPE_PUBLISHABLE_KEY, getStripe, isStripeConfigured } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/server";
 
 const NOT_CONNECTED = "Payments are not connected yet. Add your Stripe keys to turn them on.";
@@ -307,7 +307,10 @@ export async function paySubBill(formData: FormData) {
           },
         ],
         payment_intent_data: {
-          application_fee_amount: subBillFee(Number(bill.amount_cents)),
+          // No platform fee on sub bills by default; the fee was taken when the customer paid the lead.
+          ...(subBillFee(Number(bill.amount_cents)) > 0
+            ? { application_fee_amount: subBillFee(Number(bill.amount_cents)) }
+            : {}),
           metadata,
         },
         metadata,
@@ -434,10 +437,47 @@ export async function startPayoutOnboarding() {
         .from("pro_billing")
         .upsert({ user_id: viewer.id, stripe_account_id: accountId });
     }
-    url = await proAccountSetupLink(accountId);
+    // With a publishable key the form is shown inside the site; otherwise on Stripe's own page.
+    url = STRIPE_PUBLISHABLE_KEY ? "/pro/billing/setup" : await proAccountSetupLink(accountId);
   } catch (e) {
     failure = message(e);
   }
   if (failure || !url) flash("/pro/billing", "error", failure ?? "Could not start payment setup.");
+  redirect(url);
+}
+
+/** Gives the browser what it needs to show Stripe's setup form for the signed-in pro. */
+export async function payoutSetupClientSecret() {
+  const viewer = await requirePro();
+  const admin = createAdminClient();
+  const { data: billing } = await admin
+    .from("pro_billing")
+    .select("stripe_account_id")
+    .eq("user_id", viewer.id)
+    .maybeSingle();
+  if (!billing?.stripe_account_id) throw new Error("Start payment setup from the Billing page first.");
+  return proAccountSetupSession(billing.stripe_account_id);
+}
+
+/** Pro opens their Stripe Express dashboard to see payments, payouts and bank details. */
+export async function openPayoutDashboard() {
+  const viewer = await requirePro();
+  if (!isStripeConfigured) flash("/pro/billing", "error", NOT_CONNECTED);
+  const admin = createAdminClient();
+  const { data: billing } = await admin
+    .from("pro_billing")
+    .select("stripe_account_id")
+    .eq("user_id", viewer.id)
+    .maybeSingle();
+  if (!billing?.stripe_account_id) flash("/pro/billing", "error", "Set up payments first.");
+
+  let url: string | null = null;
+  let failure: string | null = null;
+  try {
+    url = await proDashboardLink(billing.stripe_account_id);
+  } catch (e) {
+    failure = message(e);
+  }
+  if (failure || !url) flash("/pro/billing", "error", failure ?? "Could not open your Stripe dashboard.");
   redirect(url);
 }

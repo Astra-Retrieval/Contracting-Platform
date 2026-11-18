@@ -470,7 +470,7 @@ export default async function ProJobPage({
                         name="sub_q"
                         defaultValue={subQuery}
                         aria-label="Search all pros"
-                        placeholder="Search all pros by name, trade or city"
+                        placeholder="Search all pros by name, trade, or city"
                         className={inputCls}
                       />
                       <button className="rounded-lg border border-stone-300 bg-white px-3 text-sm font-semibold text-stone-800 hover:bg-stone-50">

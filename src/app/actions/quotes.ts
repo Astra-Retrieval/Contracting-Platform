@@ -79,7 +79,7 @@ export async function submitQuote(formData: FormData) {
     subject: `New quote for ${project?.title}: ${money(total)}`,
     lines: [
       `${await displayName(viewer.id)} sent a quote of ${money(total)} for "${project?.title}".`,
-      "Open your project to see the scope, timeline and payment milestones, and to compare it with your other quotes.",
+      "Open your project to see the scope, timeline, and payment milestones, and to compare it with your other quotes.",
     ],
     path: `/projects/${request.project_id}`,
     cta: "Review the quote",

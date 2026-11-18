@@ -128,7 +128,7 @@ export default async function ProsPage({ searchParams }: { searchParams: SearchP
         subtitle={
           projectId
             ? "Open a profile to request a quote for your project."
-            : "Contractors, subs and handymen. Filter by trade, location, rating and price."
+            : "Contractors, subs, and handymen. Filter by trade, location, rating, and price."
         }
       />
 
@@ -152,8 +152,8 @@ export default async function ProsPage({ searchParams }: { searchParams: SearchP
         <input
           name="location"
           defaultValue={location}
-          aria-label="City, state or ZIP"
-          placeholder="City, state or ZIP"
+          aria-label="City, state, or ZIP"
+          placeholder="City, state, or ZIP"
           className={inputCls}
         />
         <select

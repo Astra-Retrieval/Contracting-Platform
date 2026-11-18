@@ -1,5 +1,6 @@
 import {
   openBillingPortal,
+  openPayoutDashboard,
   startPayoutOnboarding,
   startSubscription,
 } from "@/app/actions/payments";
@@ -123,7 +124,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Sear
 
   return (
     <div className="page max-w-4xl!">
-      <PageHeader title="Billing" subtitle="Your membership, getting paid and earnings." />
+      <PageHeader title="Billing" subtitle="Your membership, getting paid, and earnings." />
       <Flash params={params} />
       {!isStripeConfigured && (
         <p className="mb-5 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
@@ -180,14 +181,11 @@ export default async function BillingPage({ searchParams }: { searchParams: Sear
           </p>
           <div className="mt-4">
             {billing?.payouts_enabled ? (
-              <a
-                href="https://dashboard.stripe.com/"
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center rounded-lg border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-800 hover:bg-stone-50"
-              >
-                Open your Stripe dashboard
-              </a>
+              <form action={openPayoutDashboard}>
+                <SubmitButton variant="secondary" pendingText="Opening…">
+                  Open your Stripe dashboard
+                </SubmitButton>
+              </form>
             ) : (
               <form action={startPayoutOnboarding}>
                 <SubmitButton pendingText="Opening Stripe…">

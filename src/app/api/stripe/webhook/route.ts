@@ -6,8 +6,8 @@ import { getStripe } from "@/lib/stripe";
 // Milestone and sub-bill payments happen on the pros' own Stripe accounts, so they arrive
 // through a "Connected accounts" destination and carry the account id in `event.account`.
 // STRIPE_WEBHOOK_SECRET holds the signing secret. If you create two Stripe destinations
-// (one for "Your account" events, one for "Connected accounts" events such as
-// account.updated), put both secrets in it, separated by a comma.
+// (for example one for "Your account" events, one for "Connected accounts" events and one
+// for thin Accounts v2 events), put every secret in it, separated by commas.
 export async function POST(request: Request) {
   const secrets = (process.env.STRIPE_WEBHOOK_SECRET ?? "").split(",").map((s) => s.trim()).filter(Boolean);
   const signature = request.headers.get("stripe-signature");
@@ -17,6 +17,31 @@ export async function POST(request: Request) {
 
   const body = await request.text();
   const stripe = getStripe();
+
+  // Stripe sends changes to pros' accounts (Accounts v2) as "thin" events: a small notice
+  // that names the account, without the data. Fetch the account and mirror its status.
+  if (body.includes('"v2.core.event"')) {
+    for (const secret of secrets) {
+      type Notice = { type: string; related_object?: { id?: string } | null };
+      let notice: Notice | null = null;
+      try {
+        notice = stripe.parseEventNotification(body, signature, secret) as unknown as Notice;
+      } catch {
+        continue; // Try the next secret.
+      }
+      try {
+        const accountId = notice?.related_object?.id;
+        if (notice?.type.startsWith("v2.core.account") && accountId) {
+          await syncConnectAccount(await stripe.accounts.retrieve(accountId));
+        }
+      } catch (e) {
+        console.error("Stripe thin event handler failed", notice?.type, e);
+        return new Response("Handler error", { status: 500 });
+      }
+      return Response.json({ received: true });
+    }
+    return new Response("Invalid signature", { status: 400 });
+  }
   let event: Stripe.Event | null = null;
   for (const secret of secrets) {
     try {

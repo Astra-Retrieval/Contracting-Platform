@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: { default: APP_NAME, template: `%s · ${APP_NAME}` },
   description:
-    "Find contractors and handymen, compare quotes, track your budget and pay by milestone. For pros: win work, build your crew and get paid.",
+    "Find contractors and handymen, compare quotes, track your budget, and pay by milestone. For pros: win work, build your crew, and get paid.",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

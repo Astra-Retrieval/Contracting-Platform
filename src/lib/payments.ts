@@ -33,12 +33,20 @@ const LISTED_STATUSES = ["trialing", "active"];
 // Pro Stripe accounts
 // ---------------------------------------------------------------------------
 
-/** Create the Stripe account a pro is paid into. Stripe carries the risk on it. */
+// The Express dashboard combined with Stripe carrying the risk is in Stripe's public preview,
+// so creating those accounts needs the preview API version. Everything else uses the SDK default.
+const EXPRESS_PREVIEW_API_VERSION = "2026-10-28.preview";
+
+/**
+ * Create the Stripe account a pro is paid into: Express dashboard, Stripe collects its own
+ * fees from the pro and carries the risk of negative balances.
+ */
 export async function createProAccount(userId: string, email: string, name: string) {
-  const account = await getStripe().v2.core.accounts.create({
+  const account = await getStripe().v2.core.accounts.create(
+    {
     contact_email: email || undefined,
     display_name: name || undefined,
-    dashboard: "full",
+    dashboard: "express",
     identity: { country: "us" },
     defaults: {
       responsibilities: { fees_collector: "stripe", losses_collector: "stripe" },
@@ -47,11 +55,28 @@ export async function createProAccount(userId: string, email: string, name: stri
       merchant: { capabilities: { card_payments: { requested: true } } },
     },
     metadata: { user_id: userId },
-  });
+    },
+    { apiVersion: EXPRESS_PREVIEW_API_VERSION },
+  );
   return account.id;
 }
 
-/** A one-time link to Stripe's hosted setup form for a pro's account. */
+/** A short-lived secret that lets the browser show Stripe's setup form for this account. */
+export async function proAccountSetupSession(accountId: string) {
+  const session = await getStripe().accountSessions.create({
+    account: accountId,
+    components: { account_onboarding: { enabled: true } },
+  });
+  return session.client_secret;
+}
+
+/** A one-time link into the pro's Express dashboard on Stripe. */
+export async function proDashboardLink(accountId: string) {
+  const link = await getStripe().accounts.createLoginLink(accountId);
+  return link.url;
+}
+
+/** Fallback when no publishable key is set: a one-time link to Stripe's hosted setup form. */
 export async function proAccountSetupLink(accountId: string) {
   const link = await getStripe().v2.core.accountLinks.create({
     account: accountId,
@@ -198,7 +223,9 @@ export async function fulfillCheckoutSession(session: Stripe.Checkout.Session, a
       subject: `You've been paid ${usd(Number(bill.amount_cents))}`,
       lines: [
         `${await displayName(bill.lead_pro_id)} paid your bill of ${usd(Number(bill.amount_cents))} for ${await projectTitle(bill.project_id)}.`,
-        `${usd(Number(bill.amount_cents) - fee)} went to your Stripe account after the ${usd(fee)} platform fee. Stripe takes its card processing fee from that and pays the rest to your bank on its normal schedule.`,
+        fee > 0
+          ? `${usd(Number(bill.amount_cents) - fee)} went to your Stripe account after the ${usd(fee)} platform fee. Stripe takes its card processing fee from that and pays the rest to your bank on its normal schedule.`
+          : "It went to your Stripe account. Stripe takes its card processing fee from that and pays the rest to your bank on its normal schedule.",
       ],
       path: "/pro/subs",
       cta: "See your sub jobs",

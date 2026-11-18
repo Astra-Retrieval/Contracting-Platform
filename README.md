@@ -1,10 +1,10 @@
-# Trade Platform
+# Crew Orchard
 
 A marketplace where homeowners run a project from idea to final payment, and where
 contractors, subs and handymen win work, build crews and get paid. It covers jobs from a
 single bookshelf install to a whole-house renovation.
 
-"Trade Platform" is a placeholder name. Change `NEXT_PUBLIC_APP_NAME` to rename the whole site.
+The name is set in one place: `NEXT_PUBLIC_APP_NAME`.
 
 **Contents**
 
@@ -23,7 +23,7 @@ single bookshelf install to a whole-house renovation.
 13. [Changing the look](#13-changing-the-look)
 14. [Project layout](#14-project-layout)
 15. [Status: what is tested and what is not](#15-status-what-is-tested-and-what-is-not)
-16. [Before taking real payments](#16-before-taking-real-payments)
+16. [To do](#16-to-do)
 17. [Related documents](#17-related-documents)
 
 ---
@@ -43,10 +43,10 @@ single bookshelf install to a whole-house renovation.
 | Message any pro | Message customers and other pros |
 
 **Pricing.** Customers use the platform for free. Pros pay $29 a month after a 30-day free
-trial, plus a 5% platform fee on every payment they receive: milestone payments from
-customers, and bills a lead contractor pays a sub. Stripe's card processing fee is separate;
-Stripe takes it from the pro who was paid, so the platform keeps its full 5%. All of these
-numbers live in `src/lib/config.ts` (`SUB_BILL_FEE_BPS` sets the fee on sub bills).
+trial, plus a 5% platform fee on what customers pay them. There is no platform fee when a
+lead contractor pays a sub's bill. Stripe's card processing fee is separate; Stripe takes it
+from the pro who was paid, so the platform keeps its full 5%. All of these numbers live in
+`src/lib/config.ts` (`SUB_BILL_FEE_BPS` can add a fee on sub bills).
 
 ## 2. Who uses it
 
@@ -74,6 +74,7 @@ numbers live in `src/lib/config.ts` (`SUB_BILL_FEE_BPS` sets the fee on sub bill
 | Lead / job | `/pro/jobs/[id]` | Pro | Send a quote, manage milestones, add and rate subs, answer disputes |
 | Subs | `/pro/subs` | Pro | Sub invitations and favorite subs |
 | Billing | `/pro/billing` | Pro | Membership, Stripe account setup, payments received |
+| Payment setup | `/pro/billing/setup` | Pro | Stripe's account setup form, shown inside the site |
 | Messages | `/messages`, `/messages/[id]` | Signed in | Conversations and live chat |
 | Disputes | `/admin/disputes` | Admin | Decide disputes |
 | Setup check | `/setup` | Anyone | Shows which connections are missing |
@@ -133,13 +134,14 @@ charges**: every pro has their own Stripe account and is paid into it directly.
 
 4. Subs are paid the same way. A sub sends the lead contractor a bill for some or all of
    their agreed amount, the lead pays it through Checkout, and the charge is made on the
-   sub's Stripe account with the platform fee taken off the top.
+   sub's Stripe account. The platform takes no fee on sub bills.
 
 Example: a $4,000 milestone paid by card. The platform receives $200, Stripe takes about
 $116, the contractor keeps about $3,684.
 
 Stripe, not the platform, is responsible if a pro's Stripe balance goes negative (for
-example after a refund or a chargeback). Pros get a full Stripe dashboard for their account.
+example after a refund or a chargeback). Pros get Stripe's Express dashboard for their
+account, and complete Stripe's setup form inside the site (`/pro/billing/setup`).
 
 The membership is a separate, normal Stripe subscription paid to the platform. While it is
 trialing or active the pro's profile appears in search. If it lapses, the profile is hidden
@@ -284,10 +286,12 @@ Copy `.env.example` to `.env.local`. Each value is explained in section 12.
 
 Use test mode until launch.
 
-1. **Developers → API keys**: copy the secret key (`sk_test_...`) into `STRIPE_SECRET_KEY`.
+1. **Developers → API keys**: copy the secret key (`sk_test_...`) into `STRIPE_SECRET_KEY`
+   and the publishable key (`pk_test_...`) into `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`.
 2. **Connect**: turn it on and complete the platform profile, choosing the setup where
    customers pay the pro directly, the pro pays the platform a fee, and Stripe is responsible
-   for negative balances on pros' accounts.
+   for negative balances on pros' accounts. Choose embedded onboarding and the Express
+   dashboard.
 3. **Settings → Billing → Customer portal**: activate it.
 4. **Webhooks**: add two destinations, both pointing at `<your app URL>/api/stripe/webhook`:
    - **Your account**: `checkout.session.completed`, `customer.subscription.created`,
@@ -295,8 +299,11 @@ Use test mode until launch.
    - **Connected accounts**: `checkout.session.completed`,
      `checkout.session.async_payment_succeeded`, `account.updated` (milestone and sub-bill
      payments, and pros finishing Stripe setup).
+   - **Connected accounts, thin payload**: `v2.core.account[requirements].updated` and
+     `v2.core.account[configuration.merchant].capability_status_updated` (changes to what
+     Stripe needs from a pro).
 
-   Put both signing secrets in `STRIPE_WEBHOOK_SECRET`, separated by a comma.
+   Put every signing secret in `STRIPE_WEBHOOK_SECRET`, separated by commas.
 
 Locally, the Stripe CLI can forward events and prints a secret to use:
 
@@ -346,6 +353,7 @@ add that address to Supabase's redirect URLs and to a Stripe webhook endpoint.
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Supabase publishable (anon) key |
 | `SUPABASE_SERVICE_ROLE_KEY` | Yes | Supabase secret key. Server only. Never expose it |
 | `STRIPE_SECRET_KEY` | For payments | Stripe secret key |
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Recommended | Stripe publishable key; shows Stripe's setup form inside the site. Without it pros are sent to Stripe's hosted form |
 | `STRIPE_WEBHOOK_SECRET` | For production | Signing secret of the webhook endpoint |
 | `STRIPE_PRO_PRICE_ID` | No | A Stripe Price for the membership. If empty, checkout creates the price from `config.ts` |
 | `RESEND_API_KEY` | For email | Resend API key |
@@ -359,7 +367,7 @@ Business settings in `src/lib/config.ts`:
 | `PLATFORM_FEE_BPS` | 500 | Platform fee in basis points (500 = 5%) |
 | `PRO_MONTHLY_PRICE_CENTS` | 2900 | Membership price |
 | `TRIAL_DAYS` | 30 | Free trial for first-time subscribers |
-| `SUB_BILL_FEE_BPS` | 500 | Platform fee on bills a lead pays a sub (500 = 5%; 0 turns it off) |
+| `SUB_BILL_FEE_BPS` | 0 | Platform fee on bills a lead pays a sub (0 = none; 500 = 5%) |
 | `PROCESSING_FEE_BPS`, `PROCESSING_FEE_FIXED_CENTS` | 290, 30 | Used only for estimates shown to pros. Stripe takes the real fee from the pro |
 
 ## 13. Changing the look
@@ -419,7 +427,7 @@ Tested against Stripe in test mode (sandbox):
   Stripe account with the 5% platform fee
 - A dispute on a paid milestone, escalation, the admin decision, and a partial refund from
   the pro's account with the platform fee returned on the refunded part
-- A sub billing the lead contractor and being paid, with the platform fee
+- A sub billing the lead contractor and being paid
 - Reviews from the customer and a lead's rating of a sub
 
 Not yet tested:
@@ -434,17 +442,89 @@ Not yet tested:
 
 There is no automated test suite yet.
 
-## 16. Before taking real payments
+## 16. To do
 
-- Have a lawyer review the payment flow and write the terms, privacy policy and a dispute
-  policy. `/terms` and `/privacy` are placeholders.
-- Check contractor licensing rules for the launch state and decide how license numbers are
-  verified.
-- Decide how sales tax and 1099 reporting are handled.
-- Handle card chargebacks.
-- Switch to live Stripe keys and live webhook endpoints: one for your account's events and
-  one for connected accounts' events (milestone and sub-bill payments arrive on the second).
-- Remove any test accounts and data.
+Nothing in this list is built yet unless it says so.
+
+### Legal documents (before real payments)
+
+- [ ] **Terms of service** for customers and pros. `/terms` is a placeholder.
+- [ ] **Privacy policy**. `/privacy` is a placeholder.
+- [ ] **Pro agreement**: membership, the platform fee, conduct, removal from the platform,
+      and that pros are independent businesses, not employees or agents of Crew Orchard.
+- [ ] **Payment terms**: customers pay pros directly through Stripe; Crew Orchard is not a
+      party to the construction contract and does not hold funds. Never describe payments
+      as "escrow".
+- [ ] **Dispute and refund policy**: how long a customer has to report a problem, what the
+      platform can and cannot decide, and how chargebacks are handled.
+- [ ] **Review and content policy**: what can be posted, how reviews are moderated, and
+      how to report a profile.
+- [ ] **Acceptable use and anti-circumvention**: taking a job off the platform to avoid the
+      fee.
+- [ ] **Cookie notice and data requests** (deletion and export), as required where you
+      operate.
+- [ ] **E-sign consent and record keeping** for accepted quotes, which act as the
+      agreement between customer and pro.
+- [ ] **Business basics**: company formation, business insurance for the platform itself,
+      and a lawyer's review of all of the above.
+- [ ] Decide how **sales tax and 1099 reporting** are handled.
+
+### License and insurance verification
+
+- [ ] Let pros upload a **license** (number, state, classification, expiry date) and a
+      **certificate of insurance** (carrier, policy number, coverage amount, expiry date).
+      Store the files privately, not in the public photos bucket.
+- [ ] **Staff review page**: approve or reject each document with a note; check license
+      numbers against the state licensing board's lookup.
+- [ ] Show **"License verified"** and **"Insured"** badges on profiles and in search only
+      while the documents are approved and in date. Add a search filter for them.
+- [ ] **Expiry reminders** by email at 30, 14, and 3 days before a document expires, and on
+      the day. Remove the badge when a document lapses, and tell the pro why.
+- [ ] A daily scheduled job that sends those reminders and expires badges.
+- [ ] Decide whether an expired license or policy **blocks new quotes** or only removes the
+      badge.
+- [ ] Optional: ask the insurer to list Crew Orchard as a certificate holder so it is
+      notified of cancellations; consider a third-party verification service.
+- [ ] Record which trades and job sizes need a license in the launch state.
+
+### Stripe payments and payouts
+
+- [x] Membership checkout and billing portal (tested in Stripe's sandbox).
+- [x] Customer pays the pro directly, with the 5% platform fee (tested in the sandbox).
+- [ ] Add the **publishable key** so Stripe's setup form shows inside the site.
+- [ ] A test pro **completes Stripe's setup form** end to end, and the site unlocks billing.
+- [ ] **Webhook destinations** on the hosted site (section 11, step 3).
+- [ ] **Your own payouts**: activate the live Stripe account, add the business bank
+      account, and choose a payout schedule. Membership fees and the 5% land in the
+      platform's Stripe balance and are paid out from there.
+- [ ] Switch to **live keys** and repeat one small real payment and refund.
+- [ ] Review the **Express dashboard** settings and branding pros will see.
+- [ ] Decide whether to offer **bank transfer (ACH)** to cut card fees on large jobs.
+- [ ] Handle **card chargebacks**, which happen on the pro's Stripe account.
+- [x] Decided: the customer pays the lead, and the lead pays subs through sub bills. No
+      automatic split.
+
+### Project management for pros
+
+- [ ] **Job calendar**: start and end dates per job and per milestone, across all jobs.
+- [ ] **Task lists** per job, assignable to subs, with due dates.
+- [ ] **Change orders**: propose a change in scope and price; the customer approves and the
+      payment schedule updates.
+- [ ] **Daily log and progress photos** the customer can see.
+- [ ] **Documents per job**: permits, plans, contracts, lien waivers.
+- [ ] **Sub scheduling**: who is on site which day; availability requests.
+- [ ] **Materials and expense tracking** against the quote, to show job profit.
+- [ ] **Time tracking** for hourly work.
+- [ ] **Punch list and final walkthrough** before the last bill.
+- [ ] **Estimate templates** for common jobs, to quote faster.
+- [ ] **Job status board**: leads, quoted, scheduled, in progress, waiting on payment, done.
+
+### Before launch
+
+- [ ] Check contractor licensing rules for the launch state.
+- [ ] Remove any test accounts and data.
+- [ ] Real email delivery with a verified sending domain.
+- [ ] An automated test suite.
 
 ## 17. Related documents
 

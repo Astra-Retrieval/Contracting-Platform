@@ -1,12 +1,15 @@
 // One place for the things most likely to change: name, pricing, fees.
 
-export const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || "Trade Platform";
+export const APP_NAME = process.env.NEXT_PUBLIC_APP_NAME || "Crew Orchard";
 export const APP_URL = (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000").replace(/\/$/, "");
 
 /** Platform cut of every milestone payment, in basis points (500 = 5%). */
 export const PLATFORM_FEE_BPS = 500;
-/** Platform cut of every bill a sub is paid by a lead contractor. Set to 0 to charge nothing. */
-export const SUB_BILL_FEE_BPS = 500;
+/**
+ * Platform cut of a bill a lead contractor pays a sub. 0 = nothing: the platform fee is
+ * charged once, on what the customer pays the lead.
+ */
+export const SUB_BILL_FEE_BPS = 0;
 /** Monthly pro subscription, in cents. */
 export const PRO_MONTHLY_PRICE_CENTS = 2900;
 /** Free trial length for new pro subscriptions. */

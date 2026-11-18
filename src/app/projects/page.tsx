@@ -21,7 +21,7 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Sea
       <Flash params={params} />
       <PageHeader
         title="My projects"
-        subtitle="Everything you have planned, in progress and finished."
+        subtitle="Everything you have planned, in progress, and finished."
         action={<ButtonLink href="/projects/new">New project</ButtonLink>}
       />
       {(projects ?? []).length === 0 ? (

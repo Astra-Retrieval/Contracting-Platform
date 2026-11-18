@@ -509,7 +509,7 @@ export default async function ProjectPage({
                 <tr>
                   <td colSpan={4} className="px-4 py-6 text-center text-stone-500">
                     Accepted quotes appear here automatically. Add your own lines for materials,
-                    permits or anything else.
+                    permits, or anything else.
                   </td>
                 </tr>
               )}

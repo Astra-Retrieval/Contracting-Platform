@@ -32,7 +32,7 @@ export default async function NewProjectPage({ searchParams }: { searchParams: S
           </Field>
           <Field
             label="What do you want done?"
-            hint="Sizes, materials, the current condition and anything a pro would need to price the job."
+            hint="Sizes, materials, the current condition, and anything a pro would need to price the job."
           >
             <textarea name="description" rows={6} className={inputCls} />
           </Field>

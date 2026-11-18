@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { signOut } from "@/app/actions/auth";
+import { Logo } from "@/components/logo";
 import { ButtonLink, buttonCls } from "@/components/ui";
 import { getViewer } from "@/lib/auth";
 import { APP_NAME } from "@/lib/config";
@@ -43,12 +44,7 @@ export async function Nav() {
     <header className="sticky top-0 z-20 border-b border-stone-200 bg-white/90 backdrop-blur">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3">
         <Link href="/" className="flex items-center gap-2 font-bold tracking-tight text-stone-900">
-          <span
-            aria-hidden
-            className="grid size-7 place-items-center rounded-md bg-brand-300 text-sm text-brand-950"
-          >
-            ▲
-          </span>
+          <Logo />
           {APP_NAME}
         </Link>
         <nav className="order-3 -mx-1 flex w-full gap-1 overflow-x-auto text-sm md:order-none md:w-auto md:flex-1">

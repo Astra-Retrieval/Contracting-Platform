@@ -36,7 +36,7 @@ export default async function SignupPage({ searchParams }: { searchParams: Searc
       <Flash params={params} />
       <div className="mb-4 flex gap-3">
         {tab("customer", "I need work done", "Free for homeowners")}
-        {tab("pro", "I'm a pro", "Contractor, sub or handyman")}
+        {tab("pro", "I'm a pro", "Contractor, sub, or handyman")}
       </div>
       <Card>
         <form action={signUp} className="space-y-4">

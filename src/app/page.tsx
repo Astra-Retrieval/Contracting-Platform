@@ -22,14 +22,14 @@ const categories = [
 const tileTints = ["bg-brand-100", "bg-peach-100", "bg-lilac-100", "bg-sky-100", "bg-butter-100", "bg-blush-100"];
 
 const customerSteps = [
-  ["Describe your project", "A bookshelf install or a full renovation. Add photos, a budget and your dates."],
-  ["Compare quotes", "Ask as many pros as you like. See price, timeline and payment schedule side by side."],
+  ["Describe your project", "A bookshelf install or a full renovation. Add photos, a budget, and your dates."],
+  ["Compare quotes", "Ask as many pros as you like. See price, timeline, and payment schedule side by side."],
   ["Pay as work gets done", "Your pro bills each milestone as it comes due. You check the work, then approve and pay on the platform."],
 ];
 const proSteps = [
-  ["Show your work", "A profile with your trades, typical pricing, timeline and photos of past jobs."],
+  ["Show your work", "A profile with your trades, typical pricing, timeline, and photos of past jobs."],
   ["Build your crew", "Save your favorite subs, add them to a quote, and rate the ones who deliver."],
-  ["Get paid on time", "Customers pay each milestone up front. You and your subs are paid out automatically."],
+  ["Get paid on time", "Send a bill when a milestone is due. The customer pays straight into your own Stripe account."],
 ];
 
 export default async function Home() {
@@ -45,10 +45,10 @@ export default async function Home() {
               From a bookshelf to a whole-house renovation
             </p>
             <h1 className="text-4xl font-bold tracking-tight text-balance text-stone-900 md:text-5xl">
-              Find the right pro, agree a price, and pay as the work gets done.
+              Find the right pro, agree on a price, and pay as the work gets done.
             </h1>
             <p className="mt-5 max-w-xl text-lg text-stone-600">
-              {APP_NAME} runs your project end to end: quotes, budget, messages, milestone payments
+              {APP_NAME} runs your project end to end: quotes, budget, messages, milestone payments,
               and reviews you can trust, all in one place.
             </p>
             <form action="/pros" className="mt-8 flex max-w-xl gap-2">
@@ -85,9 +85,9 @@ export default async function Home() {
             <p className="mt-1 font-semibold text-stone-900">Hall bathroom remodel</p>
             <ul className="mt-4 space-y-2 text-sm">
               {[
-                ["Deposit", "$2,400", "Approved and paid out", "bg-emerald-100 text-emerald-800"],
-                ["Rough plumbing & tile", "$4,800", "Paid, work in progress", "bg-peach-100 text-peach-900"],
-                ["Fixtures & final walkthrough", "$4,800", "Not paid", "bg-stone-200 text-stone-700"],
+                ["Deposit", "$2,400", "Approved and paid", "bg-emerald-100 text-emerald-800"],
+                ["Rough plumbing & tile", "$4,800", "Bill sent, payment due", "bg-sky-100 text-sky-800"],
+                ["Fixtures & final walkthrough", "$4,800", "Scheduled", "bg-stone-200 text-stone-700"],
               ].map(([name, amount, status, tone]) => (
                 <li
                   key={name}
@@ -137,7 +137,7 @@ export default async function Home() {
         <div className="mx-auto grid max-w-6xl gap-12 px-4 py-14 md:grid-cols-2">
           {[
             ["For homeowners", customerSteps],
-            ["For contractors, subs and handymen", proSteps],
+            ["For contractors, subs, and handymen", proSteps],
           ].map(([title, steps]) => (
             <div key={title as string}>
               <h2 className="text-2xl font-bold tracking-tight">{title as string}</h2>

@@ -1,4 +1,4 @@
-<title>Trade Platform Site Map</title>
+<title>Crew Orchard Site Map</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&display=swap">
 <style>
@@ -169,7 +169,7 @@ aside { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 <div class="wrap">
   <header>
     <div>
-      <h1>Trade Platform Site Map</h1>
+      <h1>Crew Orchard Site Map</h1>
       <p class="sub">Every page on the site and how people move between them. Select a page to see what happens there, where it leads and a sample of how it looks. Pages touched by the latest update are marked in orange.</p>
     </div>
     <div class="stamp" id="stamp"></div>
@@ -212,6 +212,8 @@ const UPDATES = [
     items: ["Dispute flow: report a problem, pro reply and refund offer, staff decision", "New staff page for deciding disputes", "Email notifications for every key event", "Subs can be added from anywhere, not only favorites", "5% platform fee is now separate from Stripe's processing fee"] },
   { n: 3, date: "Nov 18, 2026", title: "Connected to Supabase, first live test",
     items: ["Site now runs on the real database", "Tested with three test accounts: sign-in, profile, search, project, quote, subs, budget, messages, disputes, photo upload", "Fixed: adding milestone rows quickly gave two rows the same id", "Fixed: the pro's dispute reply form contained a second form, which broke the page", "Not yet tested: anything that needs Stripe (membership, paying, payouts, refunds)"] },
+  { n: 6, date: "Nov 18, 2026", title: "Crew Orchard name and logo, embedded Stripe setup",
+    items: ["The site is now called Crew Orchard, with a tree logo built from circles", "Front page wording fixed, and lists across the site now use the Oxford comma", "New page: Stripe's account setup form is shown inside the site instead of on Stripe's own page", "New pro accounts get Stripe's Express dashboard", "No platform fee when a lead pays a sub's bill; the 5% applies only to what customers pay", "README has a to-do list: legal documents, license and insurance verification, Stripe payouts, project management for pros"] },
   { n: 5, date: "Nov 18, 2026", title: "Direct payments: pros bill, customers approve and pay",
     items: ["The platform no longer holds money. Each pro has their own Stripe account and is paid into it directly", "Milestones are now a payment schedule: the pro sends each bill when it comes due, the customer approves the work and pays", "The 5% platform fee is taken off the top of each payment; Stripe takes its processing fee from the pro", "Subs send bills to the lead contractor and are paid the same way", "Disputes now happen after payment and end in a refund from the pro's Stripe balance, or no refund", "Tested in Stripe's sandbox: membership, milestone bill and payment, refund, sub bill"] },
   { n: 4, date: "Nov 18, 2026", title: "Pastel green color scheme",
@@ -287,6 +289,9 @@ const NODES = [
     changes: { 2: "Fee description lists the 5% platform fee and Stripe's processing fee separately.", 5: "Payouts became Getting paid: pros set up their own Stripe account and must finish it before sending a bill. Earnings now list payments received as lead and as sub, with the platform fee on each." } },
 
   // staff
+  { id: "paysetup", lane: "pro", name: "Payment setup", route: "/pro/billing/setup", added: 6, who: "Pros",
+    about: "Stripe's account setup form, shown inside the site. The pro verifies their business and adds a bank account; the details go to Stripe.",
+    does: ["Complete or continue Stripe's setup form", "Return to Billing when finished"] },
   { id: "admin", lane: "staff", name: "Disputes", route: "/admin/disputes", added: 2, who: "Platform admins only",
     about: "Every dispute on the platform. Staff read both sides and decide how much, if anything, is refunded to the customer.",
     does: ["See open disputes, escalated ones first", "Set the refund amount and a note both sides receive", "Review closed disputes"],
@@ -295,9 +300,9 @@ const NODES = [
   // services
   { id: "checkout", lane: "svc", name: "Stripe Checkout", route: "stripe.com", added: 1, who: "Customers and pros", svc: true,
     about: "Stripe's hosted payment page. Customers pay a milestone here; pros start their membership here. Card details never touch the site.", does: [] },
-  { id: "connect", lane: "svc", name: "Stripe account setup", route: "connect.stripe.com", added: 1, who: "Pros", svc: true,
-    about: "Stripe's onboarding where a pro creates their own Stripe account, verifies identity and adds a bank account. Afterwards they use Stripe's own dashboard.", does: [],
-    changes: { 5: "Pros now get a full Stripe account of their own. Stripe, not the platform, is responsible if its balance goes negative." } },
+  { id: "connect", lane: "svc", name: "Stripe Express dashboard", route: "connect.stripe.com", added: 1, who: "Pros", svc: true,
+    about: "Stripe's dashboard for a pro's own account: payments received, payouts, and bank details.", does: [],
+    changes: { 5: "Pros now get a Stripe account of their own. Stripe, not the platform, is responsible if its balance goes negative.", 6: "Setup moved into the site (Payment setup page). This is now only the Express dashboard pros open afterwards." } },
   { id: "portal", lane: "svc", name: "Stripe billing portal", route: "billing.stripe.com", added: 1, who: "Pros", svc: true,
     about: "Where a pro updates their card, sees invoices or cancels membership.", does: [] },
   { id: "hook", lane: "svc", name: "Stripe webhook", route: "/api/stripe/webhook", added: 1, who: "Stripe only", svc: true,
@@ -326,7 +331,7 @@ const EDGES = [
   ["subs", "pro", "View a pro"], ["subs", "thread", "Message"], ["subs", "pros", "Find pros"],
   ["edit", "pro", "View public profile"],
   ["billing", "checkout", "Start membership", "ext"], ["checkout", "billing", "Back after subscribing", "ext"],
-  ["billing", "connect", "Set up payments", "ext"], ["connect", "billing", "Back after setup", "ext"], ["billing", "portal", "Manage membership", "ext"],
+  ["billing", "paysetup", "Set up payments"], ["paysetup", "billing", "Finished"], ["billing", "connect", "Open Stripe dashboard", "ext"], ["connect", "billing", "Back after setup", "ext"], ["billing", "portal", "Manage membership", "ext"],
   ["msgs", "thread", "Open"], ["thread", "pro", "View the pro"],
   ["admin", "pro", "View the pro"],
   ["checkout", "hook", "Payment events", "ext"], ["connect", "hook", "Account events", "ext"],
@@ -500,7 +505,7 @@ function drawChrome() {
 const nav = (role) => {
   const links = { out: ["Find pros"], customer: ["Dashboard", "My projects", "Find pros", "Messages"], pro: ["Dashboard", "Leads & jobs", "Subs", "Find pros", "Messages", "Profile", "Billing"], staff: ["Dashboard", "Messages", "Disputes"] }[role];
   const right = role === "out" ? `<span class="l">Sign in</span><span class="m-btn">Get started</span>` : `<span class="m-btn s">Sign out</span>`;
-  return `<div class="m-nav"><span class="m-logo"><i></i>Trade Platform</span>${links.map((l) => `<span class="l">${l}</span>`).join("")}<span class="m-sp"></span>${right}</div>`;
+  return `<div class="m-nav"><span class="m-logo"><i></i>Crew Orchard</span>${links.map((l) => `<span class="l">${l}</span>`).join("")}<span class="m-sp"></span>${right}</div>`;
 };
 const page = (role, inner) => `${nav(role)}<div class="m-body">${inner}</div>`;
 const head = (t, s, a = "") => `<div class="m-row"><div><div class="m-h">${t}</div>${s ? `<div class="m-sub">${s}</div>` : ""}</div>${a}</div>`;
@@ -540,11 +545,12 @@ const MOCKS = {
   billing: () => page("pro", `${head("Billing", "Your membership, getting paid and earnings.")}<div class="m-grid" style="grid-template-columns:1fr 1fr">${card(`${row(`<div class="m-h2">Membership</div>`, bdg("Free trial", "g"))}<div class="m-v">$29<span class="m-sub" style="font-size:11px;font-weight:400">/month</span></div><div class="m-sub">Your free trial ends Dec 18, 2026.</div><div style="margin-top:6px">${btn("Manage membership", "s")}</div>`)}${card(`${row(`<div class="m-h2">Getting paid</div>`, bdg("Ready", "g"))}<div class="m-sub">Customers pay straight into your own Stripe account when they approve a bill.</div><div style="margin-top:6px">${btn("Open your Stripe dashboard", "s")}</div>`)}</div>${stats(["Paid to you", "$2,210"], ["Platform fees", "$110.50"])}${card(`<div class="m-grid" style="grid-template-columns:1fr 2fr 1fr 1fr 1fr" ><span class="m-k">Date</span><span class="m-k">Job</span><span class="m-k">Role</span><span class="m-k">Paid</span><span class="m-k">Platform fee</span><span>Nov 4, 2026</span><span>Hall bathroom remodel · Deposit</span><span>Lead</span><b>$1,650</b><span>$82.50</span><span>Oct 20, 2026</span><span>Garage conversion · Rough-in</span><span>Sub</span><b>$560</b><span>$28</span></div>`)}`),
   admin: () => page("staff", `${head("Disputes", "Platform staff only. Decide how a disputed payment is split.")}<div class="m-h2">Open <span class="m-sub">(1)</span></div>${card(`${row(`<div><b>Hall bathroom remodel · Rough plumbing & tile</b><div class="m-sub">Maya R. vs Ridgeline Builders · opened Nov 16, 2026</div></div>`, `<div style="text-align:right"><div class="m-v">$4,800</div>${bdg("Needs your decision", "r")}</div>`)}<div class="m-grid" style="grid-template-columns:1fr 1fr;margin-top:8px;border-top:1px solid #f5f5f4;padding-top:8px"><div><div class="m-k">Customer says</div>Two floor tiles are cracked near the door and the grout color is wrong.</div><div><div class="m-k">Pro says</div>Tiles cracked after install. We will replace them. <b>Offered refund: $600</b></div></div><div class="m-grid" style="grid-template-columns:130px 1fr auto;align-items:end;margin-top:8px">${fld("Refund to customer ($)", "600.00")}${fld("Decision note", "Replace tiles; $600 back for the delay")}${btn("Decide", "d")}</div>`)}`),
   checkout: () => `<div class="m-none"><div style="width:300px;text-align:left">${card(`<div class="m-k">Hosted by Stripe</div><div class="m-h2" style="margin-top:4px">Hall bathroom remodel: Deposit</div><div class="m-v">$2,400.00</div><div class="m-grid" style="margin-top:8px">${inp("Card number")}<div class="m-grid" style="grid-template-columns:1fr 1fr">${inp("MM / YY")}${inp("CVC")}</div>${btn("Pay", "d")}</div><div class="m-sub" style="margin-top:6px;font-size:10px">Stripe's own page. Card details never touch the site.</div>`)}</div></div>`,
+  paysetup: () => page("pro", `${head("Payment setup", "Stripe verifies your business and bank account so customers can pay you.")}${card(`<div class="m-k">Stripe's form, inside Crew Orchard</div><div class="m-h2" style="margin-top:4px">Tell us about your business</div><div class="m-grid" style="margin-top:8px">${inp("Business type")}${inp("Legal name")}${inp("Bank account for payouts")}</div><div style="margin-top:8px">${btn("Continue")}</div>`)}`),
   connect: () => `<div class="m-none"><div style="width:300px;text-align:left">${card(`<div class="m-k">Hosted by Stripe</div><div class="m-h2" style="margin-top:4px">Set up your Stripe account</div><div class="m-grid" style="margin-top:8px">${inp("Legal name")}${inp("Date of birth")}${inp("Bank account for payouts")}${btn("Continue", "d")}</div><div class="m-sub" style="margin-top:6px;font-size:10px">Stripe verifies the pro and stores their bank details.</div>`)}</div></div>`,
-  portal: () => `<div class="m-none"><div style="width:300px;text-align:left">${card(`<div class="m-k">Hosted by Stripe</div><div class="m-h2" style="margin-top:4px">Trade Platform pro membership</div><div>$29.00 per month</div><div class="m-grid" style="margin-top:8px">${btn("Update payment method", "s")}${btn("View invoices", "s")}${btn("Cancel membership", "s")}</div>`)}</div></div>`,
+  portal: () => `<div class="m-none"><div style="width:300px;text-align:left">${card(`<div class="m-k">Hosted by Stripe</div><div class="m-h2" style="margin-top:4px">Crew Orchard pro membership</div><div>$29.00 per month</div><div class="m-grid" style="margin-top:8px">${btn("Update payment method", "s")}${btn("View invoices", "s")}${btn("Cancel membership", "s")}</div>`)}</div></div>`,
   hook: () => none("<div>Stripe calls this address in the background. Nobody sees it.</div>"),
   cb: () => none("<div>The confirmation link passes through here and lands on the dashboard.</div>"),
-  mail: () => `<div class="m-none" style="background:#f5f5f4"><div style="width:360px;text-align:left"><div class="m-sub" style="margin-bottom:6px"><b style="color:#1c1917">New quote for Hall bathroom remodel: $12,000</b><br>From Trade Platform</div><b>Trade Platform</b>${card(`<div>Ridgeline Builders sent a quote of $12,000 for "Hall bathroom remodel".</div><div style="margin:8px 0">Open your project to see the scope, timeline and payment milestones, and to compare it with your other quotes.</div>${btn("Review the quote")}`, "margin-top:8px")}<div class="m-sub" style="font-size:10px;margin-top:6px">You are receiving this because of activity on your Trade Platform account.</div></div></div>`,
+  mail: () => `<div class="m-none" style="background:#f5f5f4"><div style="width:360px;text-align:left"><div class="m-sub" style="margin-bottom:6px"><b style="color:#1c1917">New quote for Hall bathroom remodel: $12,000</b><br>From Crew Orchard</div><b>Crew Orchard</b>${card(`<div>Ridgeline Builders sent a quote of $12,000 for "Hall bathroom remodel".</div><div style="margin:8px 0">Open your project to see the scope, timeline and payment milestones, and to compare it with your other quotes.</div>${btn("Review the quote")}`, "margin-top:8px")}<div class="m-sub" style="font-size:10px;margin-top:6px">You are receiving this because of activity on your Crew Orchard account.</div></div></div>`,
 };
 
 function mockEl(id, big) {
