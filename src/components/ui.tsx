@@ -5,13 +5,13 @@ export const cn = (...classes: (string | false | null | undefined)[]) =>
   classes.filter(Boolean).join(" ");
 
 export const inputCls =
-  "w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-stone-900 shadow-xs placeholder:text-stone-400 focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-200";
+  "w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-stone-900 shadow-xs placeholder:text-stone-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200";
 
 const buttonBase =
-  "inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-orange-300 disabled:cursor-not-allowed disabled:opacity-50";
+  "inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-300 disabled:cursor-not-allowed disabled:opacity-50";
 const buttonVariants = {
-  primary: "bg-orange-600 text-white hover:bg-orange-700",
-  dark: "bg-stone-900 text-white hover:bg-stone-700",
+  primary: "bg-brand-300 text-brand-950 hover:bg-brand-400",
+  dark: "bg-brand-800 text-white hover:bg-brand-900",
   secondary: "border border-stone-300 bg-white text-stone-800 hover:bg-stone-50",
   ghost: "text-stone-700 hover:bg-stone-100",
   danger: "border border-red-200 bg-white text-red-700 hover:bg-red-50",
@@ -89,9 +89,9 @@ export function SectionTitle({ children, action }: { children: ReactNode; action
 
 const tones = {
   gray: "bg-stone-100 text-stone-700",
-  orange: "bg-orange-100 text-orange-800",
+  orange: "bg-peach-100 text-peach-900",
   green: "bg-emerald-100 text-emerald-800",
-  blue: "bg-sky-100 text-sky-800",
+  blue: "bg-sky-100 text-sky-900",
   red: "bg-red-100 text-red-800",
   amber: "bg-amber-100 text-amber-800",
 };
@@ -130,11 +130,10 @@ const statusMap: Record<string, [string, Tone]> = {
   removed: ["Removed", "gray"],
 };
 const milestoneMap: Record<string, [string, Tone]> = {
-  pending: ["Not paid", "gray"],
-  funded: ["Paid, work in progress", "orange"],
-  submitted: ["Ready for approval", "blue"],
-  released: ["Approved and paid out", "green"],
-  disputed: ["On hold: disputed", "red"],
+  pending: ["Scheduled", "gray"],
+  billed: ["Bill sent, payment due", "blue"],
+  paid: ["Approved and paid", "green"],
+  disputed: ["Paid, problem reported", "red"],
   refunded: ["Refunded", "gray"],
 };
 

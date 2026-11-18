@@ -62,7 +62,7 @@ export default async function ProProfilePage({ searchParams }: { searchParams: S
                     name="category"
                     value={c.id}
                     defaultChecked={selected.has(c.id)}
-                    className="size-4 accent-orange-600"
+                    className="size-4 accent-brand-600"
                   />
                   {c.name}
                 </label>
@@ -124,7 +124,7 @@ export default async function ProProfilePage({ searchParams }: { searchParams: S
             </Field>
           </div>
           <label className="flex items-center gap-2 text-sm text-stone-700">
-            <input type="checkbox" name="insured" defaultChecked={pro?.insured ?? false} className="size-4 accent-orange-600" />
+            <input type="checkbox" name="insured" defaultChecked={pro?.insured ?? false} className="size-4 accent-brand-600" />
             I carry liability insurance
           </label>
         </Card>

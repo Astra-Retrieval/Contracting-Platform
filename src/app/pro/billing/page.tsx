@@ -1,6 +1,5 @@
 import {
   openBillingPortal,
-  openPayoutDashboard,
   startPayoutOnboarding,
   startSubscription,
 } from "@/app/actions/payments";
@@ -25,12 +24,6 @@ const subscriptionLabels: Record<string, [string, "green" | "amber" | "red" | "g
   incomplete_expired: ["Expired", "gray"],
   paused: ["Paused", "amber"],
   none: ["Not started", "amber"],
-};
-const transferLabels: Record<string, [string, "green" | "amber" | "red" | "gray"]> = {
-  paid: ["Paid", "green"],
-  pending: ["Processing", "amber"],
-  awaiting_payout_setup: ["Waiting for payout setup", "amber"],
-  failed: ["Failed, will retry", "red"],
 };
 
 export default async function BillingPage({ searchParams }: { searchParams: SearchParams }) {
@@ -70,35 +63,71 @@ export default async function BillingPage({ searchParams }: { searchParams: Sear
     }
   }
 
-  const { data: transfers } = await supabase
-    .from("transfers")
-    .select("id, milestone_id, role, amount_cents, status, created_at")
-    .eq("recipient_id", viewer.id)
-    .order("created_at", { ascending: false })
-    .limit(50);
-  const milestoneIds = (transfers ?? []).map((t) => t.milestone_id);
-  const { data: milestones } = milestoneIds.length
-    ? await supabase.from("milestones").select("id, title, project_id").in("id", milestoneIds)
-    : { data: [] };
-  const { data: projects } = (milestones ?? []).length
-    ? await supabase.from("projects").select("id, title").in("id", (milestones ?? []).map((m) => m.project_id))
-    : { data: [] };
+  // Money received: milestone payments as lead contractor, and bills paid to this pro as a sub.
+  const [{ data: payments }, { data: paidBills }] = await Promise.all([
+    supabase
+      .from("payments")
+      .select("id, milestone_id, project_id, amount_cents, platform_fee_cents, refunded_cents, status, paid_at")
+      .eq("pro_id", viewer.id)
+      .in("status", ["succeeded", "refunded"])
+      .order("paid_at", { ascending: false })
+      .limit(50),
+    supabase
+      .from("sub_bills")
+      .select("id, project_id, amount_cents, platform_fee_cents, note, paid_at")
+      .eq("sub_id", viewer.id)
+      .eq("status", "paid")
+      .order("paid_at", { ascending: false })
+      .limit(50),
+  ]);
+  const milestoneIds = (payments ?? []).map((p) => p.milestone_id);
+  const projectIds = [...(payments ?? []), ...(paidBills ?? [])].map((r) => r.project_id);
+  const [{ data: milestones }, { data: projects }] = await Promise.all([
+    milestoneIds.length
+      ? supabase.from("milestones").select("id, title").in("id", milestoneIds)
+      : Promise.resolve({ data: [] }),
+    projectIds.length
+      ? supabase.from("projects").select("id, title").in("id", projectIds)
+      : Promise.resolve({ data: [] }),
+  ]);
   const milestoneById = new Map((milestones ?? []).map((m) => [m.id, m]));
   const projectById = new Map((projects ?? []).map((p) => [p.id, p]));
+  const received = [
+    ...(payments ?? []).map((p) => ({
+      id: p.id,
+      date: p.paid_at as string,
+      job: projectById.get(p.project_id)?.title ?? "Project",
+      detail: milestoneById.get(p.milestone_id)?.title ?? "",
+      role: "Lead",
+      amount: Number(p.amount_cents),
+      refunded: Number(p.refunded_cents),
+      fee: Number(p.platform_fee_cents),
+    })),
+    ...(paidBills ?? []).map((b) => ({
+      id: b.id,
+      date: b.paid_at as string,
+      job: projectById.get(b.project_id)?.title ?? "Project",
+      detail: b.note as string,
+      role: "Sub",
+      amount: Number(b.amount_cents),
+      refunded: 0,
+      fee: Number(b.platform_fee_cents),
+    })),
+  ].sort((x, y) => (x.date < y.date ? 1 : -1));
+  const totalPaid = received.reduce((n, r) => n + r.amount - r.refunded, 0);
+  const totalFees = received.reduce((n, r) => n + r.fee, 0);
 
   const status = billing?.subscription_status ?? "none";
   const [statusLabel, statusTone] = subscriptionLabels[status] ?? [status, "gray"];
   const hasSubscription = ["trialing", "active", "past_due", "unpaid", "paused"].includes(status);
-  const sum = (s: string[]) =>
-    (transfers ?? []).filter((t) => s.includes(t.status)).reduce((n, t) => n + Number(t.amount_cents), 0);
 
   return (
     <div className="page max-w-4xl!">
-      <PageHeader title="Billing" subtitle="Your membership, payouts and earnings." />
+      <PageHeader title="Billing" subtitle="Your membership, getting paid and earnings." />
       <Flash params={params} />
       {!isStripeConfigured && (
         <p className="mb-5 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          Payments are not connected on this site yet, so membership and payouts cannot be started.
+          Payments are not connected on this site yet, so membership and payment setup cannot be started.
           Until then every pro profile is listed in search.
         </p>
       )}
@@ -114,7 +143,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Sear
             {status === "trialing" && billing?.trial_ends_at
               ? `Your free trial ends ${shortDate(billing.trial_ends_at)}.`
               : hasSubscription
-                ? `Plus a ${feePercentLabel} platform fee and Stripe's card processing (about ${processingFeeLabel}) on payments you receive as lead contractor.`
+                ? `Plus a ${feePercentLabel} platform fee and Stripe's card processing (about ${processingFeeLabel}) on payments you receive.`
                 : `${TRIAL_DAYS}-day free trial for new members, then monthly. Plus a ${feePercentLabel} platform fee and Stripe's card processing (about ${processingFeeLabel}) on payments you receive as lead contractor. Your profile appears in search while your membership is active.`}
           </p>
           <div className="mt-4">
@@ -142,24 +171,27 @@ export default async function BillingPage({ searchParams }: { searchParams: Sear
               </Badge>
             }
           >
-            Payouts
+            Getting paid
           </SectionTitle>
           <p className="text-sm text-stone-600">
             {billing?.payouts_enabled
-              ? "Money from approved milestones is sent to your bank account through Stripe."
-              : "Connect a bank account through Stripe to receive money from approved milestones. Anything you earn before then is held and sent once setup is finished."}
+              ? "Customers pay straight into your own Stripe account when they approve a bill. Stripe pays out to your bank on its normal schedule."
+              : "Set up your own Stripe account to send bills. Customers pay straight into it when they approve your work, and Stripe pays out to your bank. You need this before you can bill a job."}
           </p>
           <div className="mt-4">
             {billing?.payouts_enabled ? (
-              <form action={openPayoutDashboard}>
-                <SubmitButton variant="secondary" pendingText="Opening…">
-                  Open payout dashboard
-                </SubmitButton>
-              </form>
+              <a
+                href="https://dashboard.stripe.com/"
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center rounded-lg border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-stone-800 hover:bg-stone-50"
+              >
+                Open your Stripe dashboard
+              </a>
             ) : (
               <form action={startPayoutOnboarding}>
                 <SubmitButton pendingText="Opening Stripe…">
-                  {billing?.stripe_account_id ? "Continue payout setup" : "Set up payouts"}
+                  {billing?.stripe_account_id ? "Continue payment setup" : "Set up payments"}
                 </SubmitButton>
               </form>
             )}
@@ -170,51 +202,53 @@ export default async function BillingPage({ searchParams }: { searchParams: Sear
       <div className="mt-8">
         <SectionTitle>Earnings</SectionTitle>
         <div className="grid grid-cols-2 gap-3">
-          <Stat label="Paid out" value={money(sum(["paid"]))} />
-          <Stat label="On the way" value={money(sum(["pending", "awaiting_payout_setup", "failed"]))} />
+          <Stat label="Paid to you" value={money(totalPaid)} hint="Before fees, less refunds" />
+          <Stat label="Platform fees" value={money(totalFees)} />
         </div>
         <div className="mt-4 overflow-x-auto rounded-xl border border-stone-200 bg-white">
           <table className="w-full min-w-lg text-left text-sm">
-            <caption className="sr-only">Payments released to you</caption>
+            <caption className="sr-only">Payments you have received</caption>
             <thead className="bg-stone-50 text-xs tracking-wide text-stone-500 uppercase">
               <tr>
                 <th className="px-4 py-2.5 font-medium">Date</th>
                 <th className="px-4 py-2.5 font-medium">Job</th>
                 <th className="px-4 py-2.5 font-medium">Role</th>
-                <th className="px-4 py-2.5 text-right font-medium">Amount</th>
-                <th className="px-4 py-2.5 font-medium">Status</th>
+                <th className="px-4 py-2.5 text-right font-medium">Paid</th>
+                <th className="px-4 py-2.5 text-right font-medium">Platform fee</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-stone-100">
-              {(transfers ?? []).length === 0 && (
+              {received.length === 0 && (
                 <tr>
                   <td colSpan={5} className="px-4 py-6 text-center text-stone-500">
-                    Nothing yet. Payments appear here when a customer approves a milestone.
+                    Nothing yet. Payments appear here when a bill you sent is paid.
                   </td>
                 </tr>
               )}
-              {(transfers ?? []).map((t) => {
-                const milestone = milestoneById.get(t.milestone_id);
-                const project = milestone && projectById.get(milestone.project_id);
-                const [label, tone] = transferLabels[t.status] ?? [t.status, "gray"];
-                return (
-                  <tr key={t.id}>
-                    <td className="px-4 py-2.5 whitespace-nowrap">{shortDate(t.created_at)}</td>
-                    <td className="px-4 py-2.5">
-                      {project?.title ?? "Project"}
-                      {milestone && <span className="text-stone-500"> · {milestone.title}</span>}
-                    </td>
-                    <td className="px-4 py-2.5">{t.role === "lead" ? "Lead" : "Sub"}</td>
-                    <td className="px-4 py-2.5 text-right font-medium tabular-nums">{money(t.amount_cents)}</td>
-                    <td className="px-4 py-2.5">
-                      <Badge tone={tone}>{label}</Badge>
-                    </td>
-                  </tr>
-                );
-              })}
+              {received.map((r) => (
+                <tr key={r.id}>
+                  <td className="px-4 py-2.5 whitespace-nowrap">{shortDate(r.date)}</td>
+                  <td className="px-4 py-2.5">
+                    {r.job}
+                    {r.detail && <span className="text-stone-500"> · {r.detail}</span>}
+                  </td>
+                  <td className="px-4 py-2.5">{r.role}</td>
+                  <td className="px-4 py-2.5 text-right font-medium tabular-nums">
+                    {money(r.amount - r.refunded)}
+                    {r.refunded > 0 && (
+                      <span className="block text-xs font-normal text-stone-500">{money(r.refunded)} refunded</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-2.5 text-right tabular-nums">{money(r.fee)}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
+        <p className="mt-2 text-xs text-stone-500">
+          Stripe&apos;s card processing fee (about {processingFeeLabel}) is taken by Stripe from each payment
+          and shows in your Stripe dashboard.
+        </p>
       </div>
     </div>
   );

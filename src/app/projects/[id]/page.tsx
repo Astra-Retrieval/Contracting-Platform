@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { openDispute } from "@/app/actions/disputes";
 import { startConversation } from "@/app/actions/messages";
-import { approveMilestone, payMilestone } from "@/app/actions/payments";
+import { payMilestone } from "@/app/actions/payments";
 import { addBudgetItem, addProjectPhoto, deleteBudgetItem, setProjectStatus } from "@/app/actions/projects";
 import { acceptQuote, rejectQuote } from "@/app/actions/quotes";
 import { submitReview } from "@/app/actions/reviews";
@@ -25,8 +25,8 @@ import {
 import { requireCustomer } from "@/lib/auth";
 import { prosById } from "@/lib/data";
 import { flash, money, photoUrl, shortDate } from "@/lib/format";
-import { fulfillCheckoutSession } from "@/lib/payments";
-import { getStripe, isStripeConfigured } from "@/lib/stripe";
+import { confirmCheckoutReturn } from "@/lib/payments";
+import { isStripeConfigured } from "@/lib/stripe";
 import { createClient } from "@/lib/supabase/server";
 
 type Quote = {
@@ -49,8 +49,10 @@ type Milestone = {
   status: string;
 };
 
-// Statuses where the customer's money has been taken (less anything refunded).
-const PAID = ["funded", "submitted", "released", "disputed", "refunded"];
+// Statuses where the customer has paid (less anything refunded).
+const PAID = ["paid", "disputed", "refunded"];
+
+export const metadata = { title: "Project" };
 
 export default async function ProjectPage({
   params,
@@ -68,9 +70,7 @@ export default async function ProjectPage({
   if (typeof query.session_id === "string" && isStripeConfigured) {
     let paid = false;
     try {
-      const session = await getStripe().checkout.sessions.retrieve(query.session_id);
-      await fulfillCheckoutSession(session);
-      paid = session.payment_status === "paid";
+      paid = await confirmCheckoutReturn(query.session_id);
     } catch (e) {
       console.error("Could not confirm checkout session", e);
     }
@@ -78,7 +78,7 @@ export default async function ProjectPage({
       here,
       paid ? "notice" : "error",
       paid
-        ? "Payment received. It is held until you approve the finished work."
+        ? "Approved and paid. The payment went straight to your pro."
         : "We could not confirm that payment yet. Refresh in a moment.",
     );
   }
@@ -144,7 +144,7 @@ export default async function ProjectPage({
   // Who can be reviewed: leads and subs on accepted quotes with at least one approved milestone.
   const reviewable: { proId: string; role: string }[] = [];
   for (const q of accepted) {
-    if (!milestonesFor(q.id).some((m) => ["released", "refunded"].includes(m.status))) continue;
+    if (!milestonesFor(q.id).some((m) => PAID.includes(m.status))) continue;
     reviewable.push({ proId: q.pro_id, role: "Contractor" });
     for (const s of (subs ?? []).filter((s) => s.quote_id === q.id)) {
       if (!reviewable.some((r) => r.proId === s.sub_id)) reviewable.push({ proId: s.sub_id, role: "Subcontractor" });
@@ -233,7 +233,7 @@ export default async function ProjectPage({
                 <Card key={q.id}>
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
-                      <Link href={`/pros/${q.pro_id}`} className="font-semibold text-stone-900 hover:text-orange-700">
+                      <Link href={`/pros/${q.pro_id}`} className="font-semibold text-stone-900 hover:text-brand-700">
                         {proName(q.pro_id)}
                       </Link>
                       <p className="text-sm text-stone-500">
@@ -248,12 +248,10 @@ export default async function ProjectPage({
                       </SubmitButton>
                     </form>
                   </div>
-                  {!pros.get(q.pro_id)?.payouts_ready && isStripeConfigured && (
-                    <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
-                      This pro has not finished payout setup yet. You can still pay; released money
-                      reaches them once they connect a bank account.
-                    </p>
-                  )}
+                  <p className="mt-3 text-sm text-stone-600">
+                    These milestones are the payment schedule. Your pro sends each bill when it comes
+                    due; you check the work, then approve and pay. Payments go straight to the pro.
+                  </p>
                   <ul className="mt-4 divide-y divide-stone-100 border-t border-stone-100">
                     {milestonesFor(q.id).map((m, i) => (
                       <li key={m.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
@@ -267,31 +265,22 @@ export default async function ProjectPage({
                         </div>
                         <div className="flex items-center gap-3">
                           <span className="font-semibold tabular-nums">{money(m.amount_cents)}</span>
-                          {m.status === "pending" && (
+                          {m.status === "billed" && (
                             <form action={payMilestone}>
                               <input type="hidden" name="milestone_id" value={m.id} />
                               <SubmitButton small pendingText="Opening checkout…">
-                                Pay
+                                Approve and pay
                               </SubmitButton>
                             </form>
-                          )}
-                          {(m.status === "submitted" || m.status === "funded") && (
-                            <>
-                            <form action={approveMilestone}>
-                              <input type="hidden" name="milestone_id" value={m.id} />
-                              <SubmitButton
-                                small
-                                variant={m.status === "submitted" ? "primary" : "secondary"}
-                                pendingText="Releasing…"
-                                confirm={`Approve "${m.title}" and release ${money(m.amount_cents)} to the pro? This cannot be undone.`}
-                              >
-                                {m.status === "submitted" ? "Approve and release" : "Release early"}
-                              </SubmitButton>
-                            </form>
-                            </>
                           )}
                         </div>
-                        {(m.status === "submitted" || m.status === "funded") && (
+                        {m.status === "billed" && (
+                          <p className="w-full text-sm text-stone-600">
+                            Your pro has billed this milestone. Paying it means you approve the work.
+                            Not happy yet? Message your pro before paying.
+                          </p>
+                        )}
+                        {m.status === "paid" && (
                           <details className="w-full text-sm">
                             <summary className="cursor-pointer text-stone-500 hover:text-stone-800">
                               Something wrong? Report a problem
@@ -308,11 +297,12 @@ export default async function ProjectPage({
                                 className={inputCls}
                               />
                               <p className="text-xs text-stone-500">
-                                This puts the {money(m.amount_cents)} payment on hold. The pro can reply and
-                                offer a refund, and you can ask our team to decide if you cannot agree.
+                                The pro is asked to respond and can offer to fix it or refund part of
+                                the {money(m.amount_cents)} you paid. You can ask our team to decide if you
+                                cannot agree.
                               </p>
                               <SubmitButton variant="danger" small pendingText="Reporting…">
-                                Put payment on hold
+                                Report problem
                               </SubmitButton>
                             </form>
                           </details>
@@ -333,7 +323,7 @@ export default async function ProjectPage({
                       {quoteSubs.map((s, i) => (
                         <span key={s.id}>
                           {i > 0 && ", "}
-                          <Link href={`/pros/${s.sub_id}`} className="font-medium text-stone-900 hover:text-orange-700">
+                          <Link href={`/pros/${s.sub_id}`} className="font-medium text-stone-900 hover:text-brand-700">
                             {proName(s.sub_id)}
                           </Link>
                           {s.scope && ` (${s.scope})`}
@@ -414,7 +404,7 @@ export default async function ProjectPage({
                     <Card>
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <div>
-                          <Link href={`/pros/${r.pro_id}`} className="font-semibold text-stone-900 hover:text-orange-700">
+                          <Link href={`/pros/${r.pro_id}`} className="font-semibold text-stone-900 hover:text-brand-700">
                             {proName(r.pro_id)}
                           </Link>
                           <div className="mt-0.5">

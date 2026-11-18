@@ -36,7 +36,7 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Sea
           {(projects ?? []).map((p) => (
             <li key={p.id}>
               <Link href={`/projects/${p.id}`} className="block h-full">
-                <Card className="h-full hover:border-orange-300">
+                <Card className="h-full hover:border-brand-300">
                   <div className="flex items-start justify-between gap-3">
                     <p className="font-semibold text-stone-900">{p.title}</p>
                     <StatusBadge status={p.status} />

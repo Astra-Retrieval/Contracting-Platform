@@ -77,12 +77,12 @@ export function Chat({
               <div
                 className={cn(
                   "max-w-[80%] rounded-2xl px-3.5 py-2 text-sm whitespace-pre-wrap",
-                  mine ? "bg-orange-600 text-white" : "bg-stone-100 text-stone-900",
+                  mine ? "bg-brand-200 text-brand-950" : "bg-stone-100 text-stone-900",
                 )}
               >
                 {m.body}
                 <span
-                  className={cn("mt-1 block text-[10px]", mine ? "text-orange-100" : "text-stone-500")}
+                  className={cn("mt-1 block text-[10px]", mine ? "text-brand-800" : "text-stone-500")}
                 >
                   {new Date(m.created_at).toLocaleString("en-US", {
                     month: "short",

@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { requirePro } from "@/lib/auth";
-import { estimatedProcessingFee, platformFee } from "@/lib/config";
 import { displayName, notify, projectTitle } from "@/lib/email";
 import { flash, money, text, toCents } from "@/lib/format";
 import { createAdminClient, createClient } from "@/lib/supabase/server";
@@ -58,12 +57,7 @@ export async function inviteSub(formData: FormData) {
     .maybeSingle();
   if (!sub) flash(back, "error", "That pro could not be found.");
 
-  // Subs are paid out of the quote, after the platform fee and Stripe's processing fee.
-  // Don't promise more than will exist.
-  const { count: milestoneCount } = await admin
-    .from("milestones")
-    .select("id", { count: "exact", head: true })
-    .eq("quote_id", quoteId);
+  // The lead pays subs out of what the customer pays them. Don't promise more than the quote.
   const { data: others } = await admin
     .from("project_subs")
     .select("sub_id, amount_cents")
@@ -72,15 +66,8 @@ export async function inviteSub(formData: FormData) {
   const committed = (others ?? [])
     .filter((o) => o.sub_id !== subId)
     .reduce((sum, o) => sum + Number(o.amount_cents), 0);
-  const quoteTotal = Number(quote.amount_cents);
-  const ceiling =
-    quoteTotal - platformFee(quoteTotal) - estimatedProcessingFee(quoteTotal, milestoneCount || 1);
-  if (committed + amount > ceiling) {
-    flash(
-      back,
-      "error",
-      `Sub amounts can total at most ${money(ceiling)} on this quote (the quote minus platform and processing fees).`,
-    );
+  if (committed + amount > Number(quote.amount_cents)) {
+    flash(back, "error", `Sub amounts can total at most ${money(quote.amount_cents)}, the size of this quote.`);
   }
 
   const { error } = await admin.from("project_subs").upsert(

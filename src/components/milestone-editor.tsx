@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { buttonCls, cn, inputCls } from "@/components/ui";
 
 type Row = { key: number; title: string; amount: string };
@@ -32,7 +32,9 @@ export function MilestoneEditor({
   processingFixedCents: number;
 }) {
   const [rows, setRows] = useState<Row[]>([{ key: 1, title: "Completion", amount: "" }]);
-  const [nextKey, setNextKey] = useState(2);
+  // Row ids come from a counter that updates immediately, so two quick clicks never share one.
+  const keyCounter = useRef(2);
+  const newKey = () => keyCounter.current++;
 
   const total = rows.reduce((sum, r) => sum + (parseFloat(r.amount.replace(/[^0-9.]/g, "")) || 0), 0);
   const fee = (total * feeBps) / 10000;
@@ -47,9 +49,7 @@ export function MilestoneEditor({
   function applyPreset(name: string) {
     if (!total) return;
     const parts = presets[name];
-    let k = nextKey;
-    setRows(parts.map(([title, pct]) => ({ key: k++, title, amount: ((total * pct) / 100).toFixed(2) })));
-    setNextKey(k);
+    setRows(parts.map(([title, pct]) => ({ key: newKey(), title, amount: ((total * pct) / 100).toFixed(2) })));
   }
 
   return (
@@ -97,8 +97,8 @@ export function MilestoneEditor({
           type="button"
           className={buttonCls("secondary", true)}
           onClick={() => {
-            setRows((list) => [...list, { key: nextKey, title: "", amount: "" }]);
-            setNextKey((k) => k + 1);
+            const key = newKey();
+            setRows((list) => [...list, { key, title: "", amount: "" }]);
           }}
         >
           + Add milestone

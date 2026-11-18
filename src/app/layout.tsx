@@ -19,7 +19,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className={`${geistSans.variable} h-full antialiased`}>
-      <body className="flex min-h-full flex-col bg-stone-50 text-stone-900">
+      <body className="flex min-h-full flex-col bg-brand-50 text-stone-900">
         <Nav />
         <main className="flex-1">{children}</main>
         <Footer />

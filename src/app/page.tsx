@@ -18,10 +18,13 @@ const categories = [
   ["landscaping", "Landscaping"],
 ];
 
+// Pastel tints cycled across the trade tiles.
+const tileTints = ["bg-brand-100", "bg-peach-100", "bg-lilac-100", "bg-sky-100", "bg-butter-100", "bg-blush-100"];
+
 const customerSteps = [
   ["Describe your project", "A bookshelf install or a full renovation. Add photos, a budget and your dates."],
   ["Compare quotes", "Ask as many pros as you like. See price, timeline and payment schedule side by side."],
-  ["Pay as work gets done", "Pay by milestone on the platform. Money is released when you approve the work, and held if there is a problem."],
+  ["Pay as work gets done", "Your pro bills each milestone as it comes due. You check the work, then approve and pay on the platform."],
 ];
 const proSteps = [
   ["Show your work", "A profile with your trades, typical pricing, timeline and photos of past jobs."],
@@ -38,7 +41,7 @@ export default async function Home() {
       <section className="border-b border-stone-200 bg-white">
         <div className="mx-auto grid max-w-6xl gap-10 px-4 py-16 md:grid-cols-[1.2fr_1fr] md:py-24">
           <div>
-            <p className="mb-3 text-sm font-semibold tracking-wide text-orange-700 uppercase">
+            <p className="mb-3 text-sm font-semibold tracking-wide text-brand-700 uppercase">
               From a bookshelf to a whole-house renovation
             </p>
             <h1 className="text-4xl font-bold tracking-tight text-balance text-stone-900 md:text-5xl">
@@ -75,7 +78,7 @@ export default async function Home() {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-stone-200 bg-stone-50 p-5">
+          <div className="rounded-2xl border border-brand-200 bg-brand-50 p-5">
             <p className="text-xs font-semibold tracking-wide text-stone-500 uppercase">
               Example project
             </p>
@@ -83,7 +86,7 @@ export default async function Home() {
             <ul className="mt-4 space-y-2 text-sm">
               {[
                 ["Deposit", "$2,400", "Approved and paid out", "bg-emerald-100 text-emerald-800"],
-                ["Rough plumbing & tile", "$4,800", "Paid, work in progress", "bg-orange-100 text-orange-800"],
+                ["Rough plumbing & tile", "$4,800", "Paid, work in progress", "bg-peach-100 text-peach-900"],
                 ["Fixtures & final walkthrough", "$4,800", "Not paid", "bg-stone-200 text-stone-700"],
               ].map(([name, amount, status, tone]) => (
                 <li
@@ -118,11 +121,11 @@ export default async function Home() {
       <section className="mx-auto max-w-6xl px-4 py-14">
         <h2 className="text-2xl font-bold tracking-tight">Browse by trade</h2>
         <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-          {categories.map(([slug, name]) => (
+          {categories.map(([slug, name], i) => (
             <Link
               key={slug}
               href={`/pros?category=${slug}`}
-              className="rounded-xl border border-stone-200 bg-white px-4 py-3.5 text-sm font-medium text-stone-800 hover:border-orange-300 hover:bg-orange-50"
+              className={`rounded-xl px-4 py-3.5 text-sm font-medium text-stone-800 ring-1 ring-black/5 hover:ring-brand-400 ${tileTints[i % tileTints.length]}`}
             >
               {name}
             </Link>
@@ -141,7 +144,7 @@ export default async function Home() {
               <ol className="mt-6 space-y-5">
                 {(steps as string[][]).map(([name, body], i) => (
                   <li key={name} className="flex gap-4">
-                    <span className="grid size-8 shrink-0 place-items-center rounded-full bg-stone-900 text-sm font-bold text-white">
+                    <span className="grid size-8 shrink-0 place-items-center rounded-full bg-brand-200 text-sm font-bold text-brand-950">
                       {i + 1}
                     </span>
                     <div>
@@ -157,10 +160,10 @@ export default async function Home() {
       </section>
 
       <section className="mx-auto max-w-6xl px-4 py-14">
-        <div className="grid gap-6 rounded-2xl bg-stone-900 p-8 text-white md:grid-cols-[1.4fr_1fr] md:p-10">
+        <div className="grid gap-6 rounded-2xl bg-brand-100 p-8 text-stone-900 md:grid-cols-[1.4fr_1fr] md:p-10">
           <div>
             <h2 className="text-2xl font-bold tracking-tight">Simple pricing for pros</h2>
-            <p className="mt-3 max-w-lg text-stone-300">
+            <p className="mt-3 max-w-lg text-stone-700">
               No pay-per-lead. One flat membership and a small fee only when you get paid. Free for
               homeowners, always.
             </p>
@@ -169,17 +172,17 @@ export default async function Home() {
             </ButtonLink>
           </div>
           <dl className="grid grid-cols-2 gap-4 self-center">
-            <div className="rounded-xl bg-white/10 p-4">
-              <dt className="text-sm text-stone-300">Membership</dt>
+            <div className="rounded-xl bg-white/80 p-4">
+              <dt className="text-sm text-stone-600">Membership</dt>
               <dd className="mt-1 text-3xl font-bold">
                 {price}
-                <span className="text-base font-medium text-stone-300">/mo</span>
+                <span className="text-base font-medium text-stone-600">/mo</span>
               </dd>
             </div>
-            <div className="rounded-xl bg-white/10 p-4">
-              <dt className="text-sm text-stone-300">Per payment</dt>
+            <div className="rounded-xl bg-white/80 p-4">
+              <dt className="text-sm text-stone-600">Per payment</dt>
               <dd className="mt-1 text-3xl font-bold">{feePercentLabel}</dd>
-              <dd className="mt-1 text-xs text-stone-300">plus card processing</dd>
+              <dd className="mt-1 text-xs text-stone-600">plus card processing</dd>
             </div>
           </dl>
         </div>

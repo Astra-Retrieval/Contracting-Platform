@@ -40,7 +40,7 @@ export async function submitReview(formData: FormData) {
     .from("milestones")
     .select("quote_id")
     .in("quote_id", quoteIds)
-    .in("status", ["released", "refunded"]);
+    .in("status", ["paid", "disputed", "refunded"]);
   const paidQuoteIds = new Set((released ?? []).map((m) => m.quote_id));
   const { data: subs } = await admin
     .from("project_subs")

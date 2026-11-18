@@ -54,7 +54,7 @@ export default async function MessagesPage({ searchParams }: { searchParams: Sea
             return (
               <li key={c.id}>
                 <Link href={`/messages/${c.id}`} className="block">
-                  <Card className="flex items-center justify-between gap-3 hover:border-orange-300">
+                  <Card className="flex items-center justify-between gap-3 hover:border-brand-300">
                     <div className="min-w-0">
                       <p className="font-semibold text-stone-900">{names.get(other(c)) ?? "Member"}</p>
                       <p className="truncate text-sm text-stone-600">
@@ -62,7 +62,7 @@ export default async function MessagesPage({ searchParams }: { searchParams: Sea
                       </p>
                     </div>
                     {count > 0 && (
-                      <span className="rounded-full bg-orange-600 px-2 py-0.5 text-xs font-bold text-white">
+                      <span className="rounded-full bg-brand-300 px-2 py-0.5 text-xs font-bold text-brand-950">
                         {count} new
                       </span>
                     )}

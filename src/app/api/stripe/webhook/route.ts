@@ -3,6 +3,8 @@ import { fulfillCheckoutSession, syncConnectAccount, syncSubscription } from "@/
 import { getStripe } from "@/lib/stripe";
 
 // Stripe calls this endpoint when payments, subscriptions or connected accounts change.
+// Milestone and sub-bill payments happen on the pros' own Stripe accounts, so they arrive
+// through a "Connected accounts" destination and carry the account id in `event.account`.
 // STRIPE_WEBHOOK_SECRET holds the signing secret. If you create two Stripe destinations
 // (one for "Your account" events, one for "Connected accounts" events such as
 // account.updated), put both secrets in it, separated by a comma.
@@ -30,7 +32,7 @@ export async function POST(request: Request) {
     switch (event.type) {
       case "checkout.session.completed":
       case "checkout.session.async_payment_succeeded":
-        await fulfillCheckoutSession(event.data.object);
+        await fulfillCheckoutSession(event.data.object, event.account ?? undefined);
         break;
       case "customer.subscription.created":
       case "customer.subscription.updated":

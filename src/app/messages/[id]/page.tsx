@@ -48,7 +48,7 @@ export default async function ConversationPage({ params }: { params: Promise<{ i
       </Link>
       <h1 className="mt-2 mb-4 text-2xl font-bold tracking-tight">
         {otherProfile?.role === "pro" ? (
-          <Link href={`/pros/${otherId}`} className="hover:text-orange-700">
+          <Link href={`/pros/${otherId}`} className="hover:text-brand-700">
             {name}
           </Link>
         ) : (

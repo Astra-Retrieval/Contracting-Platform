@@ -35,7 +35,7 @@ export function DisputePanel({
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="font-semibold text-stone-900">
-          {open ? "Payment on hold: problem reported" : "Dispute closed"}
+          {open ? "Problem reported on this payment" : "Dispute closed"}
         </p>
         <span className="flex items-center gap-2">
           {dispute.status === "escalated" && <Badge tone="amber">With our team for a decision</Badge>}
@@ -73,7 +73,7 @@ export function DisputePanel({
             <dt className="text-xs font-medium tracking-wide text-stone-500 uppercase">Outcome</dt>
             <dd className="mt-0.5 text-stone-800">
               {money(dispute.refund_cents ?? 0)} refunded, {money(amountCents - (dispute.refund_cents ?? 0))}{" "}
-              released. {dispute.resolution_note}
+              kept by the pro. {dispute.resolution_note}
             </dd>
           </div>
         )}
@@ -88,7 +88,7 @@ export function DisputePanel({
               <SubmitButton
                 small
                 pendingText="Resolving…"
-                confirm={`Accept a refund of ${money(offer)} and release ${money(amountCents - offer)} to the pro? This cannot be undone.`}
+                confirm={`Accept a refund of ${money(offer)} and close this dispute? This cannot be undone.`}
               >
                 Accept {money(offer)} refund
               </SubmitButton>
@@ -96,21 +96,9 @@ export function DisputePanel({
           )}
           <form action={resolveDisputeAsCustomer}>
             <input type="hidden" name="dispute_id" value={dispute.id} />
-            <input type="hidden" name="mode" value="release" />
-            <SubmitButton
-              small
-              variant="secondary"
-              pendingText="Releasing…"
-              confirm={`Release the full ${money(amountCents)} to the pro? This cannot be undone.`}
-            >
-              Release full payment
-            </SubmitButton>
-          </form>
-          <form action={resolveDisputeAsCustomer}>
-            <input type="hidden" name="dispute_id" value={dispute.id} />
             <input type="hidden" name="mode" value="withdraw" />
-            <SubmitButton small variant="ghost" confirm="Withdraw this dispute? The work continues as before.">
-              Withdraw dispute
+            <SubmitButton small variant="secondary" confirm="Close this dispute with no refund?">
+              It&apos;s sorted, close dispute
             </SubmitButton>
           </form>
           {dispute.status === "open" && <EscalateForm id={dispute.id} />}
@@ -142,13 +130,18 @@ export function DisputePanel({
               <SubmitButton small pendingText="Sending…">
                 {dispute.pro_response ? "Update reply" : "Send reply"}
               </SubmitButton>
-              {dispute.status === "open" && <EscalateForm id={dispute.id} />}
             </div>
             <p className="text-xs text-stone-500">
-              If the customer accepts your offer, that amount is refunded to them and the rest of{" "}
-              {money(amountCents)} is released to you.
+              If the customer accepts your offer, that amount of the {money(amountCents)} payment is
+              refunded to them from your Stripe balance.
             </p>
           </form>
+          {/* A separate form: forms cannot be nested. */}
+          {dispute.status === "open" && (
+            <div className="mt-2">
+              <EscalateForm id={dispute.id} />
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -162,7 +155,7 @@ function EscalateForm({ id }: { id: string }) {
       <SubmitButton
         small
         variant="ghost"
-        confirm="Ask our team to review both sides and decide how the payment is split?"
+        confirm="Ask our team to review both sides and decide whether any of the payment is refunded?"
       >
         Ask the platform to decide
       </SubmitButton>

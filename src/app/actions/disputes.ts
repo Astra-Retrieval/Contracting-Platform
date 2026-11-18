@@ -3,18 +3,20 @@
 import { requireAdmin, requireCustomer, requirePro, requireViewer } from "@/lib/auth";
 import { displayName, notify, notifyAdmin, projectTitle } from "@/lib/email";
 import { flash, money, text, toCents } from "@/lib/format";
-import { announceSettlement, settleMilestone } from "@/lib/payments";
+import { announceRefund, closeDisputedMilestone } from "@/lib/payments";
 import { isStripeConfigured } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/server";
 
 // Dispute flow
-//   1. Customer reports a problem on a paid milestone. The money is frozen ("disputed").
+//   1. Customer reports a problem on a milestone they have paid ("disputed"). The pro
+//      already has the money, so this is a request to put things right or refund.
 //   2. The pro replies and can offer a partial or full refund.
 //   3. It ends one of four ways:
-//        - the customer accepts the pro's offer            (refund + release the rest)
-//        - the customer releases the payment in full
-//        - the customer withdraws the dispute              (back to where it was)
+//        - the customer accepts the pro's offer            (that amount is refunded)
+//        - the customer closes it with no refund
+//        - the customer withdraws the dispute
 //        - either side asks the platform to decide, and an admin sets the refund
+//      Refunds come out of the pro's Stripe balance.
 
 type Admin = ReturnType<typeof createAdminClient>;
 const OPEN = ["open", "escalated"];
@@ -55,18 +57,18 @@ export async function openDispute(formData: FormData) {
     .maybeSingle();
   if (project?.customer_id !== viewer.id) flash("/projects", "error", "Milestone not found.");
   if (reason.length < 10) flash(back, "error", "Describe the problem in a sentence or two.");
-  if (!["funded", "submitted"].includes(milestone.status)) {
-    flash(back, "error", "Only a paid milestone that has not been released can be disputed.");
+  if (milestone.status !== "paid") {
+    flash(back, "error", "You can report a problem on a milestone once you have paid it.");
   }
   const { data: quote } = await admin.from("quotes").select("pro_id").eq("id", milestone.quote_id).single();
   if (!quote) flash(back, "error", "Quote not found.");
 
-  // Freeze the milestone first; only one request can win this update.
+  // Mark the milestone first; only one request can win this update.
   const { data: frozen } = await admin
     .from("milestones")
     .update({ status: "disputed", status_before_dispute: milestone.status })
     .eq("id", milestoneId)
-    .in("status", ["funded", "submitted"])
+    .eq("status", "paid")
     .select("id")
     .maybeSingle();
   if (!frozen) flash(back, "error", "This milestone can no longer be disputed.");
@@ -88,17 +90,16 @@ export async function openDispute(formData: FormData) {
     lines: [
       `${viewer.fullName || "The customer"} reported a problem with "${milestone.title}" (${money(milestone.amount_cents)}) on "${project.title}":`,
       reason,
-      "The payment is on hold until this is resolved.",
     ],
   };
   await notify(quote.pro_id, {
     ...mail,
-    lines: [...mail.lines, "Reply with your side, and offer a refund if that is fair."],
+    lines: [...mail.lines, "Reply with your side, and offer to fix it or refund part of the payment if that is fair."],
     path: await jobPath(admin, milestone.project_id, quote.pro_id),
     cta: "Respond",
   });
   await notifyAdmin({ ...mail, path: "/admin/disputes", cta: "Open disputes" });
-  flash(back, "notice", "Problem reported. The payment is on hold and the pro has been told.");
+  flash(back, "notice", "Problem reported. The pro has been told and asked to respond.");
 }
 
 /** Pro replies to a dispute and can offer a refund. */
@@ -134,8 +135,8 @@ export async function respondToDispute(formData: FormData) {
       `${await displayName(viewer.id)} replied about "${milestone?.title}":`,
       response,
       offer !== null
-        ? `They are offering a refund of ${money(offer)}. Accepting it refunds you that amount and releases the rest.`
-        : "They did not offer a refund. You can release the payment, withdraw the dispute, or ask the platform to decide.",
+        ? `They are offering a refund of ${money(offer)}. Accepting it refunds you that amount and closes the dispute.`
+        : "They did not offer a refund. You can close the dispute, or ask the platform to decide.",
     ],
     path: `/projects/${dispute.project_id}`,
     cta: "Review the reply",
@@ -162,7 +163,7 @@ export async function resolveDisputeAsCustomer(formData: FormData) {
       .single();
     await admin
       .from("milestones")
-      .update({ status: milestone?.status_before_dispute || "funded", status_before_dispute: null })
+      .update({ status: "paid", status_before_dispute: null })
       .eq("id", dispute.milestone_id)
       .eq("status", "disputed");
     await admin
@@ -171,11 +172,11 @@ export async function resolveDisputeAsCustomer(formData: FormData) {
       .eq("id", dispute.id);
     await notify(dispute.pro_id, {
       subject: `Dispute withdrawn: ${milestone?.title}`,
-      lines: [`The customer withdrew their dispute on "${milestone?.title}". The milestone is back to normal.`],
+      lines: [`The customer withdrew their dispute on "${milestone?.title}". Nothing is refunded.`],
       path: proPath,
       cta: "Open the job",
     });
-    flash(back, "notice", "Dispute withdrawn. The milestone is back to where it was.");
+    flash(back, "notice", "Dispute withdrawn.");
   }
 
   let refund = 0;
@@ -187,25 +188,25 @@ export async function resolveDisputeAsCustomer(formData: FormData) {
   }
   if (!isStripeConfigured) flash(back, "error", "Payments are not connected yet.");
 
-  const result = await settleMilestone(dispute.milestone_id, { refundCents: refund, from: ["disputed"] });
+  const result = await closeDisputedMilestone(dispute.milestone_id, refund);
   if (result.error) flash(back, "error", result.error);
   await admin
     .from("disputes")
     .update({
       status: "resolved",
       refund_cents: refund,
-      resolution_note: mode === "accept_offer" ? "Customer accepted the pro's offer." : "Customer released the payment in full.",
+      resolution_note: mode === "accept_offer" ? "Customer accepted the pro's offer." : "Customer closed the dispute with no refund.",
       resolved_by: viewer.id,
       resolved_at: new Date().toISOString(),
     })
     .eq("id", dispute.id);
-  await announceSettlement(result, viewer.id);
+  await announceRefund(result, viewer.id);
   await notify(dispute.pro_id, {
     subject: `Dispute resolved: ${result.milestoneTitle}`,
     lines: [
       refund > 0
-        ? `The customer accepted your offer. ${money(refund)} was refunded to them and the rest was released.`
-        : "The customer released the payment in full.",
+        ? `The customer accepted your offer. ${money(refund)} was refunded to them from your Stripe balance.`
+        : "The customer closed the dispute with no refund.",
     ],
     path: proPath,
     cta: "Open the job",
@@ -213,7 +214,7 @@ export async function resolveDisputeAsCustomer(formData: FormData) {
   flash(
     back,
     "notice",
-    refund > 0 ? `Resolved. ${money(refund)} is being refunded to you.` : "Resolved. The payment has been released.",
+    refund > 0 ? `Resolved. ${money(refund)} is being refunded to you.` : "Dispute closed with no refund.",
   );
 }
 
@@ -242,13 +243,13 @@ export async function escalateDispute(formData: FormData) {
   const otherId = viewer.id === dispute.customer_id ? dispute.pro_id : dispute.customer_id;
   await notify(otherId, {
     subject: `The platform was asked to decide your dispute on ${title}`,
-    lines: ["Our team will review what both sides wrote and decide how the payment is split. You will get an email with the outcome."],
+    lines: ["Our team will review what both sides wrote and decide whether any of the payment is refunded. You will get an email with the outcome."],
     path: otherId === dispute.customer_id ? `/projects/${dispute.project_id}` : await jobPath(admin, dispute.project_id, dispute.pro_id),
   });
   flash(back, "notice", "Our team has been asked to review this. Both sides will be emailed the decision.");
 }
 
-/** Platform admin decides: how much goes back to the customer, the rest is released. */
+/** Platform admin decides how much, if anything, goes back to the customer. */
 export async function adminResolveDispute(formData: FormData) {
   const viewer = await requireAdmin();
   const admin = createAdminClient();
@@ -269,7 +270,7 @@ export async function adminResolveDispute(formData: FormData) {
   if (note.length < 10) flash(back, "error", "Add a short note explaining the decision. Both sides will see it.");
   if (!isStripeConfigured) flash(back, "error", "Payments are not connected yet.");
 
-  const result = await settleMilestone(dispute.milestone_id, { refundCents: refund, from: ["disputed"] });
+  const result = await closeDisputedMilestone(dispute.milestone_id, refund);
   if (result.error) flash(back, "error", result.error);
   await admin
     .from("disputes")
@@ -281,9 +282,9 @@ export async function adminResolveDispute(formData: FormData) {
       resolved_at: new Date().toISOString(),
     })
     .eq("id", dispute.id);
-  await announceSettlement(result, dispute.customer_id);
+  await announceRefund(result, dispute.customer_id);
 
-  const outcome = `Decision on "${result.milestoneTitle}": ${money(refund)} refunded to the customer, ${money(amount - refund)} released to the pro (before fees).`;
+  const outcome = `Decision on "${result.milestoneTitle}": ${money(refund)} refunded to the customer, ${money(amount - refund)} stays with the pro.`;
   await notify(dispute.customer_id, {
     subject: "Your dispute has been decided",
     lines: [outcome, `Note from our team: ${note}`],

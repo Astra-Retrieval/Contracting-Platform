@@ -38,7 +38,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Search
       </Card>
       <p className="mt-4 text-center text-sm text-stone-600">
         New here?{" "}
-        <Link href="/signup" className="font-semibold text-orange-700 hover:underline">
+        <Link href="/signup" className="font-semibold text-brand-700 hover:underline">
           Create an account
         </Link>
       </p>

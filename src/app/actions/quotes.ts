@@ -170,7 +170,7 @@ export async function acceptQuote(formData: FormData) {
     subject: `Your quote was accepted: ${await projectTitle(quote.project_id)}`,
     lines: [
       `${viewer.fullName || "The customer"} accepted your quote of ${money(quote.amount_cents)} for "${await projectTitle(quote.project_id)}".`,
-      "You will get another email when they pay the first milestone. Make sure your payout setup is finished so you can be paid.",
+      "Send the bill for each milestone from the job page when it comes due. Finish payment setup first so the customer can pay you.",
     ],
     path: `/pro/jobs/${quote.request_id}`,
     cta: "Open the job",
@@ -204,50 +204,4 @@ export async function rejectQuote(formData: FormData) {
     cta: "See your leads",
   });
   revalidatePath(`/projects/${quote.project_id}`);
-}
-
-/** Pro marks a paid milestone as finished so the customer can approve it. */
-export async function markMilestoneComplete(formData: FormData) {
-  const viewer = await requirePro();
-  const admin = createAdminClient();
-  const milestoneId = text(formData.get("milestone_id"));
-  const requestId = text(formData.get("request_id"));
-
-  const { data: milestone } = await admin
-    .from("milestones")
-    .select("id, quote_id, project_id, title")
-    .eq("id", milestoneId)
-    .maybeSingle();
-  if (!milestone) return;
-  const { data: quote } = await admin
-    .from("quotes")
-    .select("pro_id")
-    .eq("id", milestone.quote_id)
-    .maybeSingle();
-  if (quote?.pro_id !== viewer.id) return;
-
-  const { data: updated } = await admin
-    .from("milestones")
-    .update({ status: "submitted" })
-    .eq("id", milestoneId)
-    .eq("status", "funded")
-    .select("id")
-    .maybeSingle();
-  if (updated) {
-    const { data: project } = await admin
-      .from("projects")
-      .select("title, customer_id")
-      .eq("id", milestone.project_id)
-      .single();
-    await notify(project?.customer_id, {
-      subject: `Ready for your approval: ${milestone.title}`,
-      lines: [
-        `${await displayName(viewer.id)} marked "${milestone.title}" on "${project?.title}" as complete.`,
-        "Check the work, then approve it to release the payment. If something is wrong, you can report a problem instead.",
-      ],
-      path: `/projects/${milestone.project_id}`,
-      cta: "Review and approve",
-    });
-  }
-  flash(`/pro/jobs/${requestId}`, "notice", "Marked complete. The customer can now approve it.");
 }

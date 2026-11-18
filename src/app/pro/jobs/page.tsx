@@ -47,7 +47,7 @@ export default async function ProJobsPage({ searchParams }: { searchParams: Sear
         <Empty title="No quote requests yet">
           Customers find you through search. A complete profile with photos gets more requests.
           <div className="mt-3">
-            <Link href="/pro/profile" className="font-semibold text-orange-700 hover:underline">
+            <Link href="/pro/profile" className="font-semibold text-brand-700 hover:underline">
               Improve your profile
             </Link>
           </div>
@@ -72,7 +72,7 @@ export default async function ProJobsPage({ searchParams }: { searchParams: Sear
                       return (
                         <li key={r.id}>
                           <Link href={`/pro/jobs/${r.id}`} className="block">
-                            <Card className="flex flex-wrap items-center justify-between gap-3 hover:border-orange-300">
+                            <Card className="flex flex-wrap items-center justify-between gap-3 hover:border-brand-300">
                               <div>
                                 <p className="font-semibold text-stone-900">{project?.title ?? "Project"}</p>
                                 <p className="text-sm text-stone-500">

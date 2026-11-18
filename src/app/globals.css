@@ -4,6 +4,29 @@
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
 }
 
+/* Color scheme: pastels, led by green. Change the brand scale here to re-theme the site.
+   300 is the main button color (with dark text); 700 is link text; 50 is the page background. */
+@theme {
+  --color-brand-50: #f2faf4;
+  --color-brand-100: #e1f4e6;
+  --color-brand-200: #c6e9cf;
+  --color-brand-300: #a6dbb4;
+  --color-brand-400: #84c998;
+  --color-brand-500: #63b27c;
+  --color-brand-600: #4a9663;
+  --color-brand-700: #37774d;
+  --color-brand-800: #2c5d3e;
+  --color-brand-900: #234a32;
+  --color-brand-950: #12281b;
+
+  /* Supporting pastels for tiles and status badges. */
+  --color-peach-100: #ffe6d5;
+  --color-peach-900: #8a3c14;
+  --color-lilac-100: #ece8fb;
+  --color-butter-100: #fdf3c9;
+  --color-blush-100: #fbe3ea;
+}
+
 body {
   font-family: var(--font-sans);
 }

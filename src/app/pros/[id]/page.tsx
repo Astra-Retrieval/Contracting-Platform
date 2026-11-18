@@ -20,6 +20,8 @@ import { namesById } from "@/lib/data";
 import { photoUrl, rateRange, shortDate } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
 
+export const metadata = { title: "Pro profile" };
+
 export default async function ProPage({
   params,
   searchParams,

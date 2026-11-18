@@ -45,7 +45,7 @@ export async function Nav() {
         <Link href="/" className="flex items-center gap-2 font-bold tracking-tight text-stone-900">
           <span
             aria-hidden
-            className="grid size-7 place-items-center rounded-md bg-orange-600 text-sm text-white"
+            className="grid size-7 place-items-center rounded-md bg-brand-300 text-sm text-brand-950"
           >
             ▲
           </span>
@@ -60,7 +60,7 @@ export async function Nav() {
             >
               {label}
               {href === "/messages" && unread > 0 && (
-                <span className="ml-1.5 rounded-full bg-orange-600 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                <span className="ml-1.5 rounded-full bg-brand-300 px-1.5 py-0.5 text-[10px] font-bold text-brand-950">
                   {unread}
                 </span>
               )}

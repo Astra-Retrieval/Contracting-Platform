@@ -67,7 +67,7 @@ export default async function AdminDisputesPage({ searchParams }: { searchParams
                       </p>
                       <p className="text-sm text-stone-600">
                         {customer.get(d.customer_id) || "Customer"} vs{" "}
-                        <Link href={`/pros/${d.pro_id}`} className="font-medium hover:text-orange-700">
+                        <Link href={`/pros/${d.pro_id}`} className="font-medium hover:text-brand-700">
                           {pro.get(d.pro_id) || "Pro"}
                         </Link>{" "}
                         · opened {shortDate(d.created_at)}
@@ -99,7 +99,7 @@ export default async function AdminDisputesPage({ searchParams }: { searchParams
                   </dl>
                   <form action={adminResolveDispute} className="mt-4 grid gap-3 border-t border-stone-100 pt-4 sm:grid-cols-[12rem_1fr_auto] sm:items-end">
                     <input type="hidden" name="dispute_id" value={d.id} />
-                    <Field label="Refund to customer ($)" hint={`0 to ${money(amount)}. The rest is released.`}>
+                    <Field label="Refund to customer ($)" hint={`0 to ${money(amount)}. It comes out of the pro's Stripe balance.`}>
                       <input name="refund" required inputMode="decimal" placeholder="0.00" className={inputCls} />
                     </Field>
                     <Field label="Decision note" hint="Both sides are emailed this.">
@@ -108,7 +108,7 @@ export default async function AdminDisputesPage({ searchParams }: { searchParams
                     <SubmitButton
                       variant="dark"
                       pendingText="Resolving…"
-                      confirm="Apply this decision? The refund and payout happen immediately and cannot be undone."
+                      confirm="Apply this decision? Any refund is sent immediately and cannot be undone."
                     >
                       Decide
                     </SubmitButton>

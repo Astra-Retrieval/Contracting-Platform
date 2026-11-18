@@ -187,7 +187,7 @@ export default async function ProsPage({ searchParams }: { searchParams: SearchP
       {pros.length === 0 ? (
         <Empty title="No pros match those filters">
           Try a different trade or a wider location.{" "}
-          <Link href={`/pros${suffix}`} className="font-semibold text-orange-700 hover:underline">
+          <Link href={`/pros${suffix}`} className="font-semibold text-brand-700 hover:underline">
             Clear filters
           </Link>
         </Empty>
@@ -217,7 +217,7 @@ export default async function ProsPage({ searchParams }: { searchParams: SearchP
                       )}
                     </div>
                     <div className="p-4">
-                      <p className="font-semibold text-stone-900 group-hover:text-orange-700">
+                      <p className="font-semibold text-stone-900 group-hover:text-brand-700">
                         {pro.business_name}
                       </p>
                       {pro.headline && (

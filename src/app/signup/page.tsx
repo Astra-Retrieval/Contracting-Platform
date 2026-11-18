@@ -21,7 +21,7 @@ export default async function SignupPage({ searchParams }: { searchParams: Searc
       className={cn(
         "flex-1 rounded-lg border px-4 py-3 text-left",
         role === value
-          ? "border-orange-500 bg-orange-50 ring-2 ring-orange-200"
+          ? "border-brand-500 bg-brand-50 ring-2 ring-brand-200"
           : "border-stone-200 bg-white hover:bg-stone-50",
       )}
     >
@@ -87,7 +87,7 @@ export default async function SignupPage({ searchParams }: { searchParams: Searc
       </Card>
       <p className="mt-4 text-center text-sm text-stone-600">
         Already have an account?{" "}
-        <Link href="/login" className="font-semibold text-orange-700 hover:underline">
+        <Link href="/login" className="font-semibold text-brand-700 hover:underline">
           Sign in
         </Link>
       </p>

@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { startConversation } from "@/app/actions/messages";
+import { cancelSubBill, sendSubBill } from "@/app/actions/payments";
 import { respondToSubInvite, toggleFavorite } from "@/app/actions/subs";
 import { SubmitButton } from "@/components/submit-button";
-import { ButtonLink, Card, Empty, Flash, PageHeader, SectionTitle, Stars, StatusBadge, type SearchParams } from "@/components/ui";
+import { Badge, ButtonLink, Card, Empty, Flash, PageHeader, SectionTitle, Stars, StatusBadge, inputCls, type SearchParams } from "@/components/ui";
 import { requirePro } from "@/lib/auth";
 import { prosById } from "@/lib/data";
-import { money } from "@/lib/format";
+import { subBillFeeLabel } from "@/lib/config";
+import { money, shortDate } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata = { title: "Subs" };
@@ -33,6 +35,14 @@ export default async function ProSubsPage({ searchParams }: { searchParams: Sear
     ? await supabase.from("projects").select("id, title, city, state").in("id", projectIds)
     : { data: [] };
   const projectById = new Map((projects ?? []).map((p) => [p.id, p]));
+  const { data: bills } = (roles ?? []).length
+    ? await supabase
+        .from("sub_bills")
+        .select("id, project_sub_id, amount_cents, note, status, created_at")
+        .eq("sub_id", viewer.id)
+        .neq("status", "cancelled")
+        .order("created_at")
+    : { data: [] };
 
   return (
     <div className="page">
@@ -61,7 +71,7 @@ export default async function ProSubsPage({ searchParams }: { searchParams: Sear
                         <p className="font-semibold text-stone-900">{project?.title ?? "Project"}</p>
                         <p className="text-sm text-stone-600">
                           For{" "}
-                          <Link href={`/pros/${r.lead_pro_id}`} className="font-medium hover:text-orange-700">
+                          <Link href={`/pros/${r.lead_pro_id}`} className="font-medium hover:text-brand-700">
                             {pros.get(r.lead_pro_id)?.business_name || "a contractor"}
                           </Link>
                           {project && [project.city, project.state].filter(Boolean).length > 0 &&
@@ -100,11 +110,76 @@ export default async function ProSubsPage({ searchParams }: { searchParams: Sear
                         </SubmitButton>
                       </form>
                     </div>
-                    {r.status === "accepted" && (
-                      <p className="mt-3 text-xs text-stone-500">
-                        You are paid your share automatically each time the customer approves a milestone.
-                      </p>
-                    )}
+                    {r.status === "accepted" && (() => {
+                      const mine = (bills ?? []).filter((b) => b.project_sub_id === r.id);
+                      const billed = mine.reduce((sum, b) => sum + Number(b.amount_cents), 0);
+                      const left = Number(r.amount_cents) - billed;
+                      return (
+                        <div className="mt-4 border-t border-stone-100 pt-3">
+                          <p className="text-sm font-medium text-stone-800">
+                            Your bills{" "}
+                            <span className="font-normal text-stone-500">
+                              · {money(billed)} billed, {money(left)} left to bill
+                            </span>
+                          </p>
+                          {mine.map((b) => (
+                            <div
+                              key={b.id}
+                              className="mt-2 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-stone-200 px-3 py-2 text-sm"
+                            >
+                              <div>
+                                <p className="font-medium text-stone-900 tabular-nums">{money(b.amount_cents)}</p>
+                                <p className="text-xs text-stone-500">
+                                  {shortDate(b.created_at)}
+                                  {b.note && ` · ${b.note}`}
+                                </p>
+                              </div>
+                              {b.status === "paid" ? (
+                                <Badge tone="green">Paid</Badge>
+                              ) : (
+                                <span className="flex items-center gap-2">
+                                  <Badge tone="blue">Sent, waiting for payment</Badge>
+                                  <form action={cancelSubBill}>
+                                    <input type="hidden" name="bill_id" value={b.id} />
+                                    <SubmitButton variant="ghost" small>
+                                      Cancel
+                                    </SubmitButton>
+                                  </form>
+                                </span>
+                              )}
+                            </div>
+                          ))}
+                          {left > 0 && (
+                            <form action={sendSubBill} className="mt-3 flex flex-wrap items-center gap-2">
+                              <input type="hidden" name="project_sub_id" value={r.id} />
+                              <input
+                                name="amount"
+                                required
+                                inputMode="decimal"
+                                aria-label="Bill amount in dollars"
+                                defaultValue={(left / 100).toFixed(2)}
+                                className={`${inputCls} max-w-32`}
+                              />
+                              <input
+                                name="note"
+                                maxLength={200}
+                                aria-label="Note for the contractor"
+                                placeholder="What this bill covers (optional)"
+                                className={`${inputCls} min-w-40 flex-1`}
+                              />
+                              <SubmitButton small pendingText="Sending…">
+                                Send bill
+                              </SubmitButton>
+                            </form>
+                          )}
+                          <p className="mt-2 text-xs text-stone-500">
+                            The contractor pays your bill on the platform and the money goes straight to
+                            your Stripe account, less the {subBillFeeLabel} platform fee and Stripe&apos;s card
+                            processing.
+                          </p>
+                        </div>
+                      );
+                    })()}
                   </Card>
                 </li>
               );
@@ -127,7 +202,7 @@ export default async function ProSubsPage({ searchParams }: { searchParams: Sear
               return (
                 <li key={f.sub_id}>
                   <Card className="h-full">
-                    <Link href={`/pros/${f.sub_id}`} className="font-semibold text-stone-900 hover:text-orange-700">
+                    <Link href={`/pros/${f.sub_id}`} className="font-semibold text-stone-900 hover:text-brand-700">
                       {pro?.business_name || "Pro"}
                     </Link>
                     {pro?.headline && <p className="text-sm text-stone-600">{pro.headline}</p>}

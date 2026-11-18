@@ -29,15 +29,15 @@ async function CustomerDashboard({ viewer }: { viewer: Viewer }) {
   const [{ data: quotes }, { data: milestones }] = ids.length
     ? await Promise.all([
         supabase.from("quotes").select("id, project_id, status").in("project_id", ids),
-        supabase.from("milestones").select("id, project_id, amount_cents, status").in("project_id", ids),
+        supabase.from("milestones").select("id, project_id, amount_cents, refunded_cents, status").in("project_id", ids),
       ])
     : [{ data: [] }, { data: [] }];
 
   const toReview = (quotes ?? []).filter((q) => q.status === "submitted");
-  const toApprove = (milestones ?? []).filter((m) => m.status === "submitted");
+  const toApprove = (milestones ?? []).filter((m) => m.status === "billed");
   const paid = (milestones ?? [])
-    .filter((m) => ["funded", "submitted", "released"].includes(m.status))
-    .reduce((sum, m) => sum + Number(m.amount_cents), 0);
+    .filter((m) => ["paid", "disputed", "refunded"].includes(m.status))
+    .reduce((sum, m) => sum + Number(m.amount_cents) - Number(m.refunded_cents ?? 0), 0);
   const active = (projects ?? []).filter((p) => ["open", "in_progress"].includes(p.status));
 
   return (
@@ -50,12 +50,12 @@ async function CustomerDashboard({ viewer }: { viewer: Viewer }) {
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat label="Active projects" value={active.length} />
         <Stat label="Quotes to review" value={toReview.length} />
-        <Stat label="Work to approve" value={toApprove.length} />
+        <Stat label="Bills to approve" value={toApprove.length} />
         <Stat label="Paid so far" value={money(paid)} />
       </div>
 
       <div className="mt-8">
-        <SectionTitle action={<Link href="/projects" className="text-sm font-semibold text-orange-700 hover:underline">All projects</Link>}>
+        <SectionTitle action={<Link href="/projects" className="text-sm font-semibold text-brand-700 hover:underline">All projects</Link>}>
           Recent projects
         </SectionTitle>
         {(projects ?? []).length === 0 ? (
@@ -73,7 +73,7 @@ async function CustomerDashboard({ viewer }: { viewer: Viewer }) {
               return (
                 <li key={p.id}>
                   <Link href={`/projects/${p.id}`} className="block">
-                    <Card className="flex flex-wrap items-center justify-between gap-3 hover:border-orange-300">
+                    <Card className="flex flex-wrap items-center justify-between gap-3 hover:border-brand-300">
                       <div>
                         <p className="font-semibold text-stone-900">{p.title}</p>
                         <p className="text-sm text-stone-500">Created {shortDate(p.created_at)}</p>
@@ -97,20 +97,21 @@ async function CustomerDashboard({ viewer }: { viewer: Viewer }) {
 
 async function ProDashboard({ viewer }: { viewer: Viewer }) {
   const supabase = await createClient();
-  const [{ data: pro }, { data: billing }, { data: requests }, { data: invites }, { data: transfers }, { count: photoCount }] =
+  const [{ data: pro }, { data: billing }, { data: requests }, { data: invites }, { data: payments }, { data: paidBills }, { count: photoCount }] =
     await Promise.all([
       supabase.from("pro_profiles").select("*").eq("user_id", viewer.id).maybeSingle(),
       supabase.from("pro_billing").select("subscription_status, payouts_enabled").eq("user_id", viewer.id).maybeSingle(),
       supabase.from("quote_requests").select("id, status").eq("pro_id", viewer.id),
       supabase.from("project_subs").select("id, status").eq("sub_id", viewer.id),
-      supabase.from("transfers").select("amount_cents, status").eq("recipient_id", viewer.id),
+      supabase.from("payments").select("amount_cents, refunded_cents").eq("pro_id", viewer.id).in("status", ["succeeded", "refunded"]),
+      supabase.from("sub_bills").select("amount_cents").eq("sub_id", viewer.id).eq("status", "paid"),
       supabase.from("portfolio_photos").select("id", { count: "exact", head: true }).eq("pro_id", viewer.id),
     ]);
 
   const count = (status: string) => (requests ?? []).filter((r) => r.status === status).length;
-  const earned = (transfers ?? [])
-    .filter((t) => t.status === "paid")
-    .reduce((sum, t) => sum + Number(t.amount_cents), 0);
+  const earned =
+    (payments ?? []).reduce((sum, p) => sum + Number(p.amount_cents) - Number(p.refunded_cents), 0) +
+    (paidBills ?? []).reduce((sum, b) => sum + Number(b.amount_cents), 0);
   const pendingInvites = (invites ?? []).filter((i) => i.status === "invited").length;
   const subscribed = ["trialing", "active"].includes(billing?.subscription_status ?? "");
 
@@ -118,7 +119,7 @@ async function ProDashboard({ viewer }: { viewer: Viewer }) {
     ["Complete your profile", Boolean(pro?.business_name && pro?.bio && pro?.city), "/pro/profile", "Add a bio, location and pricing"],
     ["Add photos of your work", (photoCount ?? 0) > 0, "/pro/profile#photos", "Profiles with photos get more requests"],
     ["Start your membership", subscribed, "/pro/billing", "Free for the first 30 days"],
-    ["Set up payouts", Boolean(billing?.payouts_enabled), "/pro/billing", "Connect a bank account to get paid"],
+    ["Set up payments", Boolean(billing?.payouts_enabled), "/pro/billing", "Needed before you can send a bill"],
   ];
   const remaining = checklist.filter(([, done]) => !done);
 
@@ -133,7 +134,7 @@ async function ProDashboard({ viewer }: { viewer: Viewer }) {
         <Stat label="New requests" value={count("pending")} />
         <Stat label="Active jobs" value={count("accepted")} />
         <Stat label="Sub invitations" value={pendingInvites} />
-        <Stat label="Paid out to you" value={money(earned)} />
+        <Stat label="Paid to you" value={money(earned)} />
       </div>
 
       {remaining.length > 0 && (
@@ -141,14 +142,14 @@ async function ProDashboard({ viewer }: { viewer: Viewer }) {
           <SectionTitle>Get set up</SectionTitle>
           {!isStripeConfigured && (
             <p className="mb-3 text-sm text-stone-500">
-              Payments are not connected on this site yet, so membership and payouts are unavailable.
+              Payments are not connected on this site yet, so membership and billing are unavailable.
             </p>
           )}
           <ul className="grid gap-3 sm:grid-cols-2">
             {checklist.map(([label, done, href, hint]) => (
               <li key={label}>
                 <Link href={href} className="block">
-                  <Card className="flex items-center gap-3 hover:border-orange-300">
+                  <Card className="flex items-center gap-3 hover:border-brand-300">
                     <span
                       aria-hidden
                       className={`grid size-6 shrink-0 place-items-center rounded-full text-xs font-bold ${done ? "bg-emerald-600 text-white" : "border-2 border-stone-300 text-transparent"}`}

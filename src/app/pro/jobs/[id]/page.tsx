@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { startConversation } from "@/app/actions/messages";
-import { declineRequest, markMilestoneComplete, submitQuote } from "@/app/actions/quotes";
+import { paySubBill, sendMilestoneBill } from "@/app/actions/payments";
+import { declineRequest, submitQuote } from "@/app/actions/quotes";
 import { submitSubRating } from "@/app/actions/reviews";
 import { inviteSub, removeSub } from "@/app/actions/subs";
 import { DisputePanel, type Dispute } from "@/components/dispute-panel";
@@ -27,10 +28,14 @@ import {
   processingFeeLabel,
 } from "@/lib/config";
 import { namesById, prosById } from "@/lib/data";
-import { money, photoUrl, shortDate } from "@/lib/format";
+import { flash, money, photoUrl, shortDate } from "@/lib/format";
+import { confirmCheckoutReturn } from "@/lib/payments";
+import { isStripeConfigured } from "@/lib/stripe";
 import { createClient } from "@/lib/supabase/server";
 
 type Milestone = { id: string; quote_id: string; title: string; amount_cents: number; status: string };
+
+export const metadata = { title: "Job" };
 
 export default async function ProJobPage({
   params,
@@ -42,6 +47,22 @@ export default async function ProJobPage({
   const viewer = await requirePro();
   const { id } = await params;
   const query = await searchParams;
+
+  // Coming back from paying a sub's bill: record it now rather than waiting for the webhook.
+  if (typeof query.session_id === "string" && isStripeConfigured) {
+    let paid = false;
+    try {
+      paid = await confirmCheckoutReturn(query.session_id);
+    } catch (e) {
+      console.error("Could not confirm checkout session", e);
+    }
+    flash(
+      `/pro/jobs/${id}`,
+      paid ? "notice" : "error",
+      paid ? "Paid. The payment went straight to your sub." : "We could not confirm that payment yet. Refresh in a moment.",
+    );
+  }
+
   const supabase = await createClient();
 
   const { data: request } = await supabase
@@ -88,6 +109,18 @@ export default async function ProJobPage({
     supabase.from("sub_ratings").select("sub_id, rating, body").eq("project_id", project.id).eq("lead_pro_id", viewer.id),
     supabase.from("disputes").select("*").eq("project_id", project.id).eq("pro_id", viewer.id).order("created_at"),
   ]);
+  const [{ data: subBills }, { data: myBilling }] = await Promise.all([
+    (subs ?? []).length
+      ? supabase
+          .from("sub_bills")
+          .select("id, project_sub_id, amount_cents, note, status, created_at")
+          .in("project_sub_id", (subs ?? []).map((s) => s.id))
+          .neq("status", "cancelled")
+          .order("created_at")
+      : Promise.resolve({ data: [] }),
+    supabase.from("pro_billing").select("payouts_enabled").eq("user_id", viewer.id).maybeSingle(),
+  ]);
+  const canBill = Boolean(myBilling?.payouts_enabled);
   const disputeFor = new Map<string, Dispute>();
   for (const d of (disputeRows ?? []) as Dispute[]) disputeFor.set(d.milestone_id, d);
   const milestones = (milestoneRows ?? []) as Milestone[];
@@ -193,9 +226,9 @@ export default async function ProJobPage({
               <div className="flex flex-wrap items-baseline gap-x-6 gap-y-1">
                 <p className="text-2xl font-bold tabular-nums">{money(total)}</p>
                 <p className="text-sm text-stone-600">
-                  You receive about {money(total - fee - subTotal)} after the {PLATFORM_FEE_BPS / 100}%
-                  platform fee and card processing ({processingFeeLabel} per payment)
-                  {subTotal > 0 && `, and ${money(subTotal)} to subs`}
+                  You keep about {money(total - fee - subTotal)} after the {PLATFORM_FEE_BPS / 100}%
+                  platform fee and Stripe&apos;s card processing ({processingFeeLabel} per payment)
+                  {subTotal > 0 && `, and ${money(subTotal)} you pay your subs`}
                 </p>
               </div>
               {quote.timeline && <p className="mt-1 text-sm text-stone-600">Timeline: {quote.timeline}</p>}
@@ -216,12 +249,26 @@ export default async function ProJobPage({
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="font-semibold tabular-nums">{money(m.amount_cents)}</span>
-                      {isAccepted && m.status === "funded" && (
-                        <form action={markMilestoneComplete}>
+                      {isAccepted && m.status === "pending" && canBill && (
+                        <form action={sendMilestoneBill}>
                           <input type="hidden" name="milestone_id" value={m.id} />
                           <input type="hidden" name="request_id" value={id} />
-                          <SubmitButton small pendingText="Saving…">
-                            Mark complete
+                          <SubmitButton
+                            small
+                            pendingText="Sending…"
+                            confirm={`Send the customer the bill for "${m.title}" (${money(m.amount_cents)})?`}
+                          >
+                            Send bill
+                          </SubmitButton>
+                        </form>
+                      )}
+                      {isAccepted && m.status === "billed" && (
+                        <form action={sendMilestoneBill}>
+                          <input type="hidden" name="milestone_id" value={m.id} />
+                          <input type="hidden" name="request_id" value={id} />
+                          <input type="hidden" name="mode" value="recall" />
+                          <SubmitButton small variant="ghost" pendingText="Recalling…">
+                            Recall bill
                           </SubmitButton>
                         </form>
                       )}
@@ -238,8 +285,19 @@ export default async function ProJobPage({
               </ul>
               {isAccepted && milestones.some((m) => m.status === "pending") && (
                 <p className="mt-2 text-xs text-stone-500">
-                  Start a milestone once the customer has paid it. You are paid out when they approve
-                  the finished work.
+                  {canBill ? (
+                    <>
+                      Send each bill when it comes due. The customer approves the work and pays, and
+                      the money goes straight to your Stripe account, less the platform fee.
+                    </>
+                  ) : (
+                    <>
+                      <Link href="/pro/billing" className="font-semibold text-brand-700 hover:underline">
+                        Finish payment setup
+                      </Link>{" "}
+                      to send bills on this job.
+                    </>
+                  )}
                 </p>
               )}
             </Card>
@@ -265,8 +323,8 @@ export default async function ProJobPage({
                 <div>
                   <p className="mb-1 text-sm font-medium text-stone-800">Payment milestones</p>
                   <p className="mb-2 text-xs text-stone-500">
-                    The customer pays each milestone before you start it, and releases it when the
-                    work is approved.
+                    Milestones are the payment schedule the customer sees. You send the bill for
+                    each one when it comes due, and they approve the work and pay.
                   </p>
                   <MilestoneEditor
                     feeBps={PLATFORM_FEE_BPS}
@@ -306,7 +364,7 @@ export default async function ProJobPage({
                         <li key={s.id} className="py-3 first:pt-0">
                           <div className="flex items-start justify-between gap-2">
                             <div>
-                              <Link href={`/pros/${s.sub_id}`} className="font-medium text-stone-900 hover:text-orange-700">
+                              <Link href={`/pros/${s.sub_id}`} className="font-medium text-stone-900 hover:text-brand-700">
                                 {subPros.get(s.sub_id)?.business_name || "Pro"}
                               </Link>
                               <p className="text-sm text-stone-600">
@@ -333,6 +391,35 @@ export default async function ProJobPage({
                               </form>
                             )}
                           </div>
+                          {(subBills ?? [])
+                            .filter((b) => b.project_sub_id === s.id)
+                            .map((b) => (
+                              <div
+                                key={b.id}
+                                className="mt-2 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-stone-200 px-3 py-2 text-sm"
+                              >
+                                <div>
+                                  <p className="font-medium text-stone-900 tabular-nums">
+                                    Bill: {money(b.amount_cents)}
+                                  </p>
+                                  <p className="text-xs text-stone-500">
+                                    {shortDate(b.created_at)}
+                                    {b.note && ` · ${b.note}`}
+                                  </p>
+                                </div>
+                                {b.status === "paid" ? (
+                                  <Badge tone="green">Paid</Badge>
+                                ) : (
+                                  <form action={paySubBill}>
+                                    <input type="hidden" name="bill_id" value={b.id} />
+                                    <input type="hidden" name="request_id" value={id} />
+                                    <SubmitButton small pendingText="Opening checkout…">
+                                      Pay
+                                    </SubmitButton>
+                                  </form>
+                                )}
+                              </div>
+                            ))}
                           {isAccepted && s.status === "accepted" && (
                             <form action={submitSubRating} className="mt-3 space-y-2 rounded-lg bg-stone-50 p-3">
                               <input type="hidden" name="project_sub_id" value={s.id} />
@@ -393,7 +480,7 @@ export default async function ProJobPage({
                     {subQuery && searchOptions.length === 0 && (
                       <p className="mb-3 text-sm text-stone-500">
                         No other pros match &ldquo;{subQuery}&rdquo;.{" "}
-                        <Link href="/pros" className="font-semibold text-orange-700 hover:underline">
+                        <Link href="/pros" className="font-semibold text-brand-700 hover:underline">
                           Browse all pros
                         </Link>
                       </p>

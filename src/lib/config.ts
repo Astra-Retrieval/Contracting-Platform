@@ -5,6 +5,8 @@ export const APP_URL = (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:300
 
 /** Platform cut of every milestone payment, in basis points (500 = 5%). */
 export const PLATFORM_FEE_BPS = 500;
+/** Platform cut of every bill a sub is paid by a lead contractor. Set to 0 to charge nothing. */
+export const SUB_BILL_FEE_BPS = 500;
 /** Monthly pro subscription, in cents. */
 export const PRO_MONTHLY_PRICE_CENTS = 2900;
 /** Free trial length for new pro subscriptions. */
@@ -15,15 +17,19 @@ export const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
 export const isSupabaseConfigured = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
 
 /**
- * Stripe's card processing fee, used only for estimates shown before a payment is made.
- * The real fee is read from Stripe when the payment succeeds and is what gets deducted.
+ * Stripe's card processing fee, used only for estimates shown to pros. Stripe takes the
+ * real fee from the pro's own Stripe account; the platform never handles it.
  */
 export const PROCESSING_FEE_BPS = 290;
 export const PROCESSING_FEE_FIXED_CENTS = 30;
 
-/** Our cut. Stripe's processing fee is separate and comes out of the pro's payout too. */
+/** Our cut of a milestone payment. Stripe's processing fee is separate and is also paid by the pro. */
 export const platformFee = (amountCents: number) =>
   Math.round((amountCents * PLATFORM_FEE_BPS) / 10000);
+/** Our cut of a sub's bill. */
+export const subBillFee = (amountCents: number) =>
+  Math.round((amountCents * SUB_BILL_FEE_BPS) / 10000);
+export const subBillFeeLabel = `${SUB_BILL_FEE_BPS / 100}%`;
 /** Estimated Stripe fee on an amount paid in `payments` separate card payments. */
 export const estimatedProcessingFee = (amountCents: number, payments = 1) =>
   amountCents > 0
