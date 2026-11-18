@@ -1,0 +1,593 @@
+<title>Trade Platform Site Map</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&display=swap">
+<style>
+/* Layout: a drafting-sheet site plan. Lanes are who can open a page; lines are how you get from one to the next. Detail and change log sit beside the sheet. */
+:root {
+  --bg: #eef2f6;
+  --sheet: #f9fbfd;
+  --ink: #14263a;
+  --muted: #5b6b7d;
+  --line: #c3cfdb;
+  --grid: #dfe7ef;
+  --node: #ffffff;
+  --accent: #d9480f;
+  --accent-soft: #ffe8dc;
+  --select: #1c5fb8;
+  --select-soft: #dbe9fb;
+  --ext: #6b4fa3;
+  --display: "Space Grotesk", "Inter", system-ui, sans-serif;
+  --body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0d1722; --sheet: #121f2d; --ink: #e4ecf4; --muted: #93a4b6; --line: #33475c; --grid: #1a2a3b;
+    --node: #182838; --accent: #ff8a4c; --accent-soft: #46260f; --select: #6fb0ff; --select-soft: #17324f; --ext: #b9a1ee;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0d1722; --sheet: #121f2d; --ink: #e4ecf4; --muted: #93a4b6; --line: #33475c; --grid: #1a2a3b;
+  --node: #182838; --accent: #ff8a4c; --accent-soft: #46260f; --select: #6fb0ff; --select-soft: #17324f; --ext: #b9a1ee;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.5;
+  padding-block: 28px 48px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 1500px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+header { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; }
+h1 { font-family: var(--display); font-size: 28px; font-weight: 700; letter-spacing: -0.01em; margin: 0; text-wrap: balance; }
+.sub { color: var(--muted); margin: 4px 0 0; max-width: 62ch; }
+.stamp { font-family: var(--mono); font-size: 12px; color: var(--muted); border: 1px solid var(--line); border-radius: 4px; padding: 6px 10px; background: var(--sheet); }
+.stamp b { color: var(--ink); font-weight: 500; }
+
+.updates { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.updates .label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-right: 4px; }
+.chip {
+  font: 500 13px var(--body); color: var(--ink); background: var(--sheet); border: 1px solid var(--line);
+  border-radius: 999px; padding: 6px 12px; cursor: pointer;
+}
+.chip:hover { border-color: var(--muted); }
+.chip[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--ink); }
+.chip:focus-visible, .node:focus-visible, .linkbtn:focus-visible { outline: 2px solid var(--select); outline-offset: 2px; }
+
+.main { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 20px; align-items: start; }
+@media (max-width: 980px) { .main { grid-template-columns: minmax(0, 1fr); } }
+
+.sheet { background: var(--sheet); border: 1px solid var(--line); border-radius: 6px; min-width: 0; }
+.scroll { overflow-x: auto; }
+svg { display: block; width: 100%; min-width: 940px; height: auto; }
+.lane-title { font: 700 12px var(--display); letter-spacing: 0.1em; text-transform: uppercase; fill: var(--muted); }
+.lane-note { font: 400 11px var(--body); fill: var(--muted); }
+.lane-rule { stroke: var(--grid); stroke-width: 1; }
+
+.edge { fill: none; stroke: var(--muted); stroke-opacity: 0.6; stroke-width: 1.25; }
+.edge.ext { stroke-dasharray: 5 4; }
+.edge.mail { stroke-dasharray: 1.5 4; stroke-linecap: round; }
+.edge.on { stroke: var(--select); stroke-opacity: 1; stroke-width: 2; }
+.dim .edge:not(.on) { opacity: 0.25; }
+.arrow-dim { fill: var(--muted); fill-opacity: 0.7; }
+.arrow-on { fill: var(--select); }
+
+.node { cursor: pointer; }
+.node rect.box { fill: var(--node); stroke: var(--line); stroke-width: 1.25; }
+.node.svc rect.box { stroke: var(--ext); stroke-dasharray: 4 3; }
+.node text.name { font: 600 13px var(--body); fill: var(--ink); }
+.node text.route { font: 400 10.5px var(--mono); fill: var(--muted); }
+.node:hover rect.box { stroke: var(--muted); }
+.node.fresh rect.box { stroke: var(--accent); stroke-width: 2; fill: var(--accent-soft); }
+.node.sel rect.box { stroke: var(--select); stroke-width: 2.5; fill: var(--select-soft); }
+.node.near rect.box { stroke: var(--select); }
+.dim .node:not(.sel):not(.near) { opacity: 0.45; }
+.tag rect { fill: var(--accent); }
+.tag text { font: 600 9.5px var(--body); fill: var(--sheet); letter-spacing: 0.04em; text-transform: uppercase; }
+
+.legend { display: flex; flex-wrap: wrap; gap: 6px 18px; padding: 10px 14px; border-top: 1px solid var(--line); font-size: 12px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { display: inline-block; width: 26px; height: 0; border-top: 2px solid var(--line); }
+.legend i.ext { border-top-style: dashed; }
+.legend i.mail { border-top-style: dotted; }
+.legend i.sw { width: 14px; height: 14px; border: 2px solid var(--accent); background: var(--accent-soft); border-radius: 3px; }
+
+aside { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.panel { background: var(--sheet); border: 1px solid var(--line); border-radius: 6px; padding: 16px; }
+.panel h2 { font: 700 12px var(--display); letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin: 0 0 10px; }
+.panel h3 { font: 700 19px var(--display); margin: 0; }
+.route { font: 12px var(--mono); color: var(--muted); word-break: break-all; }
+.who { display: inline-block; margin-top: 8px; font-size: 12px; border: 1px solid var(--line); border-radius: 999px; padding: 2px 9px; color: var(--muted); }
+.panel p { margin: 10px 0 0; }
+.panel ul { margin: 8px 0 0; padding-left: 18px; }
+.panel li { margin: 3px 0; }
+.kv { margin-top: 14px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.links { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.linkbtn { font: 500 12.5px var(--body); color: var(--ink); background: var(--node); border: 1px solid var(--line); border-radius: 4px; padding: 3px 8px; cursor: pointer; text-align: left; }
+.linkbtn:hover { border-color: var(--select); }
+.linkbtn small { color: var(--muted); font-weight: 400; }
+.change { margin-top: 8px; border-left: 3px solid var(--accent); background: var(--accent-soft); padding: 8px 10px; border-radius: 0 4px 4px 0; font-size: 13.5px; }
+.change b { font-weight: 600; }
+.log-item { padding: 10px 0; border-top: 1px solid var(--grid); }
+.log-item:first-of-type { border-top: 0; padding-top: 0; }
+.log-item .when { font: 11.5px var(--mono); color: var(--muted); }
+.log-item .ttl { font-weight: 600; margin-top: 2px; }
+.log-item ul { font-size: 13.5px; color: var(--ink); }
+.empty { color: var(--muted); font-size: 14px; }
+/* ---- sample screens. These imitate the site itself, which is always light, so their colors are fixed. */
+.col { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+.shot-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 16px; margin-bottom: 12px; }
+.shot-head h2 { margin: 0; }
+.shot-head .note { font-size: 12px; color: var(--muted); }
+.frame { position: relative; overflow: hidden; border: 1px solid var(--line); border-radius: 6px; background: #fafaf9; }
+.frame.big { max-width: 860px; }
+.gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 14px; }
+.thumb { display: block; width: 100%; padding: 0; border: 0; background: none; text-align: left; cursor: pointer; color: var(--ink); font-family: var(--body); }
+.thumb .frame { transition: border-color 0.15s; }
+.thumb:hover .frame { border-color: var(--muted); }
+.thumb[aria-pressed="true"] .frame { border-color: var(--select); box-shadow: 0 0 0 2px var(--select); }
+.thumb:focus-visible { outline: 2px solid var(--select); outline-offset: 3px; }
+.thumb .cap { display: flex; justify-content: space-between; gap: 8px; margin-top: 6px; font-size: 12.5px; font-weight: 600; }
+.thumb .cap small { font: 400 10.5px var(--mono); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mock { width: 720px; height: 450px; overflow: hidden; transform-origin: top left; background: #fafaf9; color: #1c1917; font: 12px/1.45 var(--body); pointer-events: none; user-select: none; }
+.frame.big .mock { height: auto; min-height: 450px; }
+.mock * { box-sizing: border-box; }
+.m-nav { display: flex; align-items: center; gap: 14px; padding: 9px 18px; background: #fff; border-bottom: 1px solid #e7e5e4; }
+.m-logo { font-weight: 700; display: flex; gap: 6px; align-items: center; }
+.m-logo i { width: 16px; height: 16px; border-radius: 4px; background: #ea580c; display: inline-block; }
+.m-nav .l { color: #57534e; font-weight: 500; }
+.m-sp { flex: 1; }
+.m-body { padding: 18px 22px; display: flex; flex-direction: column; gap: 12px; }
+.m-h { font-weight: 700; font-size: 19px; letter-spacing: -0.01em; }
+.m-h2 { font-weight: 600; font-size: 13px; }
+.m-sub { color: #78716c; }
+.m-btn { display: inline-block; padding: 5px 11px; border-radius: 6px; background: #ea580c; color: #fff; font-weight: 600; font-size: 11px; white-space: nowrap; }
+.m-btn.s { background: #fff; color: #292524; border: 1px solid #d6d3d1; }
+.m-btn.d { background: #1c1917; }
+.m-card { background: #fff; border: 1px solid #e7e5e4; border-radius: 9px; padding: 12px; }
+.m-in { border: 1px solid #d6d3d1; border-radius: 6px; padding: 5px 9px; color: #a8a29e; background: #fff; min-height: 27px; }
+.m-b { display: inline-block; border-radius: 99px; padding: 1px 8px; font-size: 10px; font-weight: 500; background: #f5f5f4; color: #44403c; white-space: nowrap; }
+.m-b.g { background: #d1fae5; color: #065f46; } .m-b.o { background: #ffedd5; color: #9a3412; } .m-b.b { background: #e0f2fe; color: #075985; }
+.m-b.r { background: #fee2e2; color: #991b1b; } .m-b.a { background: #fef3c7; color: #92400e; }
+.m-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.m-grid { display: grid; gap: 10px; }
+.m-k { font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.05em; color: #78716c; }
+.m-v { font-weight: 700; font-size: 17px; font-variant-numeric: tabular-nums; }
+.m-ph { background: #e7e5e4; border-radius: 6px; }
+.m-star { color: #f59e0b; letter-spacing: -1px; }
+.m-lbl { font-weight: 500; font-size: 11px; margin-bottom: 3px; }
+.m-dark { background: #1c1917; color: #fff; border-radius: 12px; padding: 16px; }
+.m-hold { border: 1px solid #fecaca; background: #fef2f2; border-radius: 7px; padding: 9px; }
+.m-me { align-self: flex-end; background: #ea580c; color: #fff; border-radius: 12px; padding: 6px 10px; max-width: 70%; }
+.m-you { align-self: flex-start; background: #f5f5f4; border-radius: 12px; padding: 6px 10px; max-width: 70%; }
+.m-none { height: 450px; display: grid; place-items: center; text-align: center; color: #78716c; padding: 40px; }
+@media (prefers-reduced-motion: no-preference) { .edge, .node rect.box { transition: stroke 0.15s, opacity 0.15s, fill 0.15s; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Trade Platform Site Map</h1>
+      <p class="sub">Every page on the site and how people move between them. Select a page to see what happens there, where it leads and a sample of how it looks. Pages touched by the latest update are marked in orange.</p>
+    </div>
+    <div class="stamp" id="stamp"></div>
+  </header>
+
+  <div class="updates" id="updates" role="group" aria-label="Highlight an update"><span class="label">Highlight</span></div>
+
+  <div class="main">
+    <div class="col">
+    <div class="sheet">
+      <div class="scroll"><svg id="map" role="group" aria-label="Site map diagram"></svg></div>
+      <div class="legend">
+        <span><i></i>Link or button on the site</span>
+        <span><i class="ext"></i>Leaves the site (Stripe) or runs in the background</span>
+        <span><i class="mail"></i>Link inside a notification email</span>
+        <span><i class="sw"></i>New or changed in the highlighted update</span>
+      </div>
+    </div>
+    <div class="panel" id="shot"></div>
+    <div class="panel">
+      <div class="shot-head"><h2>Sample screens</h2><span class="note">Illustrations with made-up data, not screenshots. Select one to enlarge it.</span></div>
+      <div class="gallery" id="gallery"></div>
+    </div>
+    </div>
+    <aside>
+      <div class="panel" id="detail" aria-live="polite"></div>
+      <div class="panel"><h2>Change log</h2><div id="log"></div></div>
+    </aside>
+  </div>
+</div>
+
+<script>
+// ---------------------------------------------------------------- data
+// To record new work: add an entry to UPDATES, then set `added` on new pages or add a
+// note under `changes` on pages that changed. The newest update is highlighted by default.
+const UPDATES = [
+  { n: 1, date: "Nov 18, 2026", title: "First build",
+    items: ["All customer and pro pages", "Search, quotes, milestones, budget tracker", "Messaging, favorite subs, reviews", "Stripe membership, payouts and milestone payments"] },
+  { n: 2, date: "Nov 18, 2026", title: "Disputes, emails, any-sub invites, fees",
+    items: ["Dispute flow: report a problem, pro reply and refund offer, staff decision", "New staff page for deciding disputes", "Email notifications for every key event", "Subs can be added from anywhere, not only favorites", "5% platform fee is now separate from Stripe's processing fee"] },
+];
+
+const LANES = [
+  { id: "public", title: "Public", note: "Anyone, no account" },
+  { id: "customer", title: "Customer", note: "Signed-in homeowners" },
+  { id: "both", title: "Everyone signed in", note: "Customers and pros" },
+  { id: "pro", title: "Pro", note: "Contractors, subs, handymen" },
+  { id: "staff", title: "Staff", note: "Platform admins" },
+  { id: "svc", title: "Outside the site", note: "Services and background jobs" },
+];
+
+const NODES = [
+  // public
+  { id: "home", lane: "public", name: "Home", route: "/", added: 1, who: "Anyone",
+    about: "Landing page: what the platform does, browse by trade, how it works for each side, and pro pricing.",
+    does: ["Search for a pro by keyword", "Jump to a trade", "Start a project or join as a pro"],
+    changes: { 2: "Pricing block now says 5% plus card processing." } },
+  { id: "pros", lane: "public", name: "Find pros", route: "/pros", added: 1, who: "Anyone",
+    about: "Search results for contractors, subs and handymen.",
+    does: ["Filter by trade, location, rating and hourly rate", "Open a profile", "Arrive from a project to pick pros to quote it"] },
+  { id: "pro", lane: "public", name: "Pro profile", route: "/pros/[id]", added: 1, who: "Anyone",
+    about: "A pro's public page: trades, pricing, timeline, photo gallery, customer reviews and verified ratings from contractors.",
+    does: ["Customer: send a quote request for one of their projects", "Pro: add to favorite subs", "Anyone signed in: start a message"] },
+  { id: "signup", lane: "public", name: "Create account", route: "/signup", added: 1, who: "Signed-out visitors",
+    about: "Sign up as a customer or as a pro.",
+    does: ["Choose account type", "Pros give a business name"],
+    changes: { 2: "Fee wording updated: platform fee and card processing are listed separately." } },
+  { id: "login", lane: "public", name: "Sign in", route: "/login", added: 1, who: "Signed-out visitors",
+    about: "Email and password sign-in.", does: ["Sign in", "Shows the confirm-your-email notice after sign-up"] },
+  { id: "terms", lane: "public", name: "Terms", route: "/terms", added: 1, who: "Anyone", about: "Placeholder until real terms are written.", does: [] },
+  { id: "privacy", lane: "public", name: "Privacy", route: "/privacy", added: 1, who: "Anyone", about: "Placeholder until a real policy is written.", does: [] },
+  { id: "setup", lane: "public", name: "Setup check", route: "/setup", added: 1, who: "Anyone",
+    about: "Shows which connections (Supabase, Stripe) are still missing. Every data page sends you here until the database is connected.", does: ["See what is connected", "Follow the setup steps"] },
+
+  // customer
+  { id: "projects", lane: "customer", name: "My projects", route: "/projects", added: 1, who: "Customers",
+    about: "All of a customer's projects with status and budget.", does: ["Open a project", "Start a new one"] },
+  { id: "new", lane: "customer", name: "New project", route: "/projects/new", added: 1, who: "Customers",
+    about: "Describe the job: title, details, trade, budget, location and dates.", does: ["Create the project"] },
+  { id: "project", lane: "customer", name: "Project", route: "/projects/[id]", added: 1, who: "The customer who owns it",
+    about: "The hub for one project, from quotes to final payment.",
+    does: ["Add photos", "Compare quotes side by side, accept or decline", "Pay each milestone, then approve the work to release it", "Track planned and paid amounts in the budget tracker", "Review the contractor and subs"],
+    changes: { 2: "Report a problem on a paid milestone to put the payment on hold. See the pro's reply and refund offer, then accept it, release in full, withdraw, or ask the platform to decide." } },
+
+  // both
+  { id: "dash", lane: "both", name: "Dashboard", route: "/dashboard", added: 1, who: "Any signed-in member",
+    about: "Different for each side. Customers see projects, quotes to review and work to approve. Pros see new requests, active jobs, sub invitations, earnings and a setup checklist.",
+    does: ["Jump to whatever needs attention"] },
+  { id: "msgs", lane: "both", name: "Messages", route: "/messages", added: 1, who: "Any signed-in member",
+    about: "All conversations with unread counts.", does: ["Open a conversation"] },
+  { id: "thread", lane: "both", name: "Conversation", route: "/messages/[id]", added: 1, who: "The two people in it",
+    about: "Live one-to-one chat: customer to pro, or pro to pro.", does: ["Send and receive messages in real time"],
+    changes: { 2: "The other person is emailed when a new message arrives and they have nothing unread from you yet." } },
+
+  // pro
+  { id: "edit", lane: "pro", name: "Edit profile", route: "/pro/profile", added: 1, who: "Pros",
+    about: "Everything on the public profile.", does: ["Business details, trades, location", "Hourly rate, typical job size, timeline", "License and insurance", "Upload and remove photos"] },
+  { id: "jobs", lane: "pro", name: "Leads & jobs", route: "/pro/jobs", added: 1, who: "Pros",
+    about: "Quote requests grouped into active jobs, new requests, quotes sent and closed.", does: ["Open a request or job"] },
+  { id: "job", lane: "pro", name: "Lead / job", route: "/pro/jobs/[id]", added: 1, who: "The pro who was asked",
+    about: "One request from a customer, and the job it becomes once the quote is accepted.",
+    does: ["Read the project and photos", "Send or revise a quote with payment milestones", "Mark paid milestones complete", "Add subs with a scope and an amount", "Rate subs who worked the job (verified)"],
+    changes: { 2: "Search all pros to add a sub; favorites are just a shortcut. Reply to disputes and offer a refund. Payout estimate now shows the platform fee and card processing separately." } },
+  { id: "subs", lane: "pro", name: "Subs", route: "/pro/subs", added: 1, who: "Pros",
+    about: "Jobs other contractors have invited you onto, and your saved favorite subs.", does: ["Accept or decline a sub invitation", "Message the contractor", "Manage favorites"],
+    changes: { 2: "Wording now makes clear that favorites are optional." } },
+  { id: "billing", lane: "pro", name: "Billing", route: "/pro/billing", added: 1, who: "Pros",
+    about: "Membership, payout setup and earnings.", does: ["Start the free trial or manage membership", "Connect a bank account for payouts", "See every payment released to you"],
+    changes: { 2: "Fee description lists the 5% platform fee and Stripe's processing fee separately." } },
+
+  // staff
+  { id: "admin", lane: "staff", name: "Disputes", route: "/admin/disputes", added: 2, who: "Platform admins only",
+    about: "Every dispute on the platform. Staff read both sides and decide how much is refunded to the customer; the rest is released to the pro.",
+    does: ["See open disputes, escalated ones first", "Set the refund amount and a note both sides receive", "Review closed disputes"] },
+
+  // services
+  { id: "checkout", lane: "svc", name: "Stripe Checkout", route: "stripe.com", added: 1, who: "Customers and pros", svc: true,
+    about: "Stripe's hosted payment page. Customers pay a milestone here; pros start their membership here. Card details never touch the site.", does: [] },
+  { id: "connect", lane: "svc", name: "Stripe payout setup", route: "connect.stripe.com", added: 1, who: "Pros", svc: true,
+    about: "Stripe's onboarding where a pro verifies identity and adds a bank account, plus their payout dashboard afterwards.", does: [] },
+  { id: "portal", lane: "svc", name: "Stripe billing portal", route: "billing.stripe.com", added: 1, who: "Pros", svc: true,
+    about: "Where a pro updates their card, sees invoices or cancels membership.", does: [] },
+  { id: "hook", lane: "svc", name: "Stripe webhook", route: "/api/stripe/webhook", added: 1, who: "Stripe only", svc: true,
+    about: "Stripe calls this in the background when a payment succeeds, a membership changes or payout setup finishes. It updates milestones, membership status and search listing.", does: [],
+    changes: { 2: "Now records Stripe's actual processing fee for each payment." } },
+  { id: "mail", lane: "svc", name: "Email notifications", route: "Resend", added: 2, who: "Sent to members and staff", svc: true,
+    about: "Emails sent when something needs attention. Each one has a button that opens the right page.",
+    does: ["New quote request, new quote, quote accepted or declined", "Milestone paid, ready for approval, paid out, refunded", "Sub invitation and the sub's answer", "New message, new review or rating", "Dispute opened, replied to, escalated and decided"] },
+  { id: "cb", lane: "svc", name: "Email confirmation", route: "/auth/callback", added: 1, who: "New members", svc: true,
+    about: "Where the confirm-your-email link lands. It signs the person in and sends them to the dashboard.", does: [] },
+];
+
+// [from, to, label, kind]  kind: undefined = on-site link, "ext" = leaves site / background, "mail" = email link
+const EDGES = [
+  ["home", "pros", "Search or pick a trade"], ["home", "signup", "Start a project / Join as a pro"], ["home", "dash", "Go to dashboard"],
+  ["pros", "pro", "Open a profile"],
+  ["pro", "project", "Send quote request"], ["pro", "new", "Create a project first"], ["pro", "thread", "Message"], ["pro", "signup", "Get started"], ["pro", "edit", "Edit (own profile)"],
+  ["signup", "login", "Confirm email, then sign in"], ["signup", "dash", "Customer signed up"], ["signup", "edit", "Pro signed up"], ["signup", "terms", "Terms"], ["signup", "privacy", "Privacy"],
+  ["login", "dash", "Signed in"], ["cb", "dash", "Email confirmed", "ext"],
+  ["dash", "projects", "All projects"], ["dash", "new", "New project"], ["dash", "project", "Open a project"],
+  ["dash", "jobs", "Leads & jobs"], ["dash", "subs", "Your subs"], ["dash", "billing", "Membership and payouts"], ["dash", "edit", "Complete profile"], ["dash", "msgs", "Messages"],
+  ["projects", "project", "Open"], ["projects", "new", "New project"], ["new", "project", "Created"],
+  ["project", "pros", "Find pros to quote"], ["project", "pro", "View a pro"], ["project", "thread", "Message a pro"],
+  ["project", "checkout", "Pay a milestone", "ext"], ["checkout", "project", "Back after paying", "ext"],
+  ["jobs", "job", "Open"], ["job", "thread", "Message customer or sub"], ["job", "pro", "View a sub"], ["job", "pros", "Browse all pros"],
+  ["subs", "pro", "View a pro"], ["subs", "thread", "Message"], ["subs", "pros", "Find pros"],
+  ["edit", "pro", "View public profile"],
+  ["billing", "checkout", "Start membership", "ext"], ["checkout", "billing", "Back after subscribing", "ext"],
+  ["billing", "connect", "Set up payouts", "ext"], ["connect", "billing", "Back after setup", "ext"], ["billing", "portal", "Manage membership", "ext"],
+  ["msgs", "thread", "Open"], ["thread", "pro", "View the pro"],
+  ["admin", "pro", "View the pro"],
+  ["checkout", "hook", "Payment events", "ext"], ["connect", "hook", "Account events", "ext"],
+  ["mail", "job", "Request, payment, dispute", "mail"], ["mail", "project", "Quote, approval, refund", "mail"], ["mail", "subs", "Sub invitation", "mail"],
+  ["mail", "billing", "You've been paid", "mail"], ["mail", "thread", "New message", "mail"], ["mail", "admin", "Dispute needs a decision", "mail"],
+];
+
+// ---------------------------------------------------------------- layout
+const NS = "http://www.w3.org/2000/svg";
+const W = 176, H = 46, COL = 214, TOP = 78, ROW = 64, LEFT = 24;
+const byId = Object.fromEntries(NODES.map((n) => [n.id, n]));
+const latest = Math.max(...UPDATES.map((u) => u.n));
+let shown = latest;     // which update is highlighted (0 = none)
+let selected = null;
+
+LANES.forEach((lane, i) => {
+  NODES.filter((n) => n.lane === lane.id).forEach((n, j) => { n.x = LEFT + i * COL; n.y = TOP + j * ROW; n.col = i; });
+});
+const rows = Math.max(...LANES.map((l) => NODES.filter((n) => n.lane === l.id).length));
+const VW = LEFT * 2 + LANES.length * COL - (COL - W), VH = TOP + rows * ROW + 8;
+
+const el = (tag, attrs = {}, text) => {
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (text != null) e.textContent = text;
+  return e;
+};
+const touched = (n, u) => n.added === u || (n.changes && n.changes[u]);
+
+function edgePath(a, b) {
+  const ay = a.y + H / 2, by = b.y + H / 2;
+  if (a.col === b.col) {                      // same lane: bow out to the right
+    const x = a.x + W, bow = 26 + Math.min(40, Math.abs(by - ay) / 6);
+    return `M${x},${ay} C${x + bow},${ay} ${x + bow},${by} ${x + 7},${by}`;
+  }
+  const right = b.col > a.col;
+  const x1 = right ? a.x + W : a.x, x2 = right ? b.x - 7 : b.x + W + 7;
+  const k = Math.max(40, Math.abs(x2 - x1) * 0.45) * (right ? 1 : -1);
+  return `M${x1},${ay} C${x1 + k},${ay} ${x2 - k},${by} ${x2},${by}`;
+}
+
+function draw() {
+  const svg = document.getElementById("map");
+  svg.replaceChildren();
+  svg.setAttribute("viewBox", `0 0 ${VW} ${VH}`);
+  svg.classList.toggle("dim", Boolean(selected));
+
+  const defs = el("defs");
+  for (const kind of ["dim", "on"]) {
+    const m = el("marker", { id: "arrow-" + kind, viewBox: "0 0 8 8", refX: 1, refY: 4, markerWidth: 7, markerHeight: 7, orient: "auto-start-reverse" });
+    m.append(el("path", { d: "M0,0 L8,4 L0,8 z", class: "arrow-" + kind }));
+    defs.append(m);
+  }
+  svg.append(defs);
+
+  LANES.forEach((lane, i) => {
+    const x = LEFT + i * COL;
+    svg.append(el("text", { x, y: 28, class: "lane-title" }, lane.title));
+    svg.append(el("text", { x, y: 46, class: "lane-note" }, lane.note));
+    if (i) svg.append(el("line", { x1: x - (COL - W) / 2, y1: 12, x2: x - (COL - W) / 2, y2: VH - 8, class: "lane-rule" }));
+  });
+
+  const near = new Set();
+  const edges = el("g");
+  EDGES.forEach(([from, to, , kind]) => {
+    const on = selected && (from === selected || to === selected);
+    if (on) { near.add(from); near.add(to); }
+    edges.append(el("path", {
+      d: edgePath(byId[from], byId[to]),
+      class: ["edge", kind || "", on ? "on" : ""].join(" ").trim(),
+      "marker-end": `url(#arrow-${on ? "on" : "dim"})`,
+    }));
+  });
+  svg.append(edges);
+
+  NODES.forEach((n) => {
+    const fresh = shown && touched(n, shown);
+    const g = el("g", {
+      class: ["node", n.svc ? "svc" : "", fresh ? "fresh" : "", n.id === selected ? "sel" : "", near.has(n.id) ? "near" : ""].join(" ").replace(/\s+/g, " ").trim(),
+      transform: `translate(${n.x},${n.y})`, tabindex: 0, role: "button",
+      "aria-pressed": String(n.id === selected),
+      "aria-label": `${n.name}, ${n.route}${fresh ? (n.added === shown ? ", new" : ", updated") : ""}`,
+    });
+    g.append(el("rect", { class: "box", width: W, height: H, rx: 5 }));
+    g.append(el("text", { class: "name", x: 11, y: 19 }, n.name));
+    g.append(el("text", { class: "route", x: 11, y: 35 }, n.route));
+    if (fresh) {
+      const label = n.added === shown ? "New" : "Updated", tw = label.length * 6.2 + 12;
+      const tag = el("g", { class: "tag", transform: `translate(${W - tw - 5},-8)` });
+      tag.append(el("rect", { width: tw, height: 16, rx: 8 }));
+      tag.append(el("text", { x: tw / 2, y: 11.5, "text-anchor": "middle" }, label));
+      g.append(tag);
+    }
+    const pick = () => { selected = selected === n.id ? null : n.id; render(); };
+    g.addEventListener("click", pick);
+    g.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(); } });
+    svg.append(g);
+  });
+}
+
+// ---------------------------------------------------------------- side panels
+const h = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+
+function linkList(pairs) {
+  const box = h("div", "links");
+  pairs.forEach(([id, label]) => {
+    const b = h("button", "linkbtn");
+    b.type = "button";
+    b.append(byId[id].name + " ");
+    b.append(h("small", "", label));
+    b.addEventListener("click", () => { selected = id; render(); });
+    box.append(b);
+  });
+  return box;
+}
+
+function drawDetail() {
+  const box = document.getElementById("detail");
+  box.replaceChildren();
+  box.append(h("h2", "", "Selected page"));
+  const n = byId[selected];
+  if (!n) {
+    box.append(h("p", "empty", "Select any page on the map to see what it is for, what people can do there, and every way in and out of it."));
+    return;
+  }
+  box.append(h("h3", "", n.name), h("div", "route", n.route), h("span", "who", n.who), h("p", "", n.about));
+  if (n.does.length) { const ul = h("ul"); n.does.forEach((d) => ul.append(h("li", "", d))); box.append(ul); }
+  const out = EDGES.filter((e) => e[0] === n.id).map((e) => [e[1], e[2]]);
+  const inn = EDGES.filter((e) => e[1] === n.id).map((e) => [e[0], e[2]]);
+  if (out.length) box.append(h("div", "kv", "Leads to"), linkList(out));
+  if (inn.length) box.append(h("div", "kv", "Reached from"), linkList(inn));
+  const history = UPDATES.filter((u) => touched(n, u.n) && u.n > 1);
+  if (history.length) {
+    box.append(h("div", "kv", "What changed"));
+    history.forEach((u) => {
+      const c = h("div", "change");
+      c.append(h("b", "", `Update ${u.n}: `), n.added === u.n ? "Added. " + n.about : n.changes[u.n]);
+      box.append(c);
+    });
+  }
+}
+
+function drawChrome() {
+  const latestU = UPDATES.find((u) => u.n === latest);
+  const stamp = document.getElementById("stamp");
+  stamp.replaceChildren();
+  stamp.append(`${NODES.filter((n) => !n.svc).length} pages · ${NODES.filter((n) => n.svc).length} services · last updated `, h("b", "", latestU.date));
+
+  const bar = document.getElementById("updates");
+  bar.querySelectorAll("button").forEach((b) => b.remove());
+  [...UPDATES].reverse().forEach((u) => {
+    const b = h("button", "chip", `Update ${u.n}: ${u.title}`);
+    b.type = "button"; b.id = "chip-" + u.n;
+    b.setAttribute("aria-pressed", String(shown === u.n));
+    b.addEventListener("click", () => { shown = shown === u.n ? 0 : u.n; render(); });
+    bar.append(b);
+  });
+
+  const log = document.getElementById("log");
+  log.replaceChildren();
+  [...UPDATES].reverse().forEach((u) => {
+    const item = h("div", "log-item");
+    item.append(h("div", "when", `Update ${u.n} · ${u.date}`), h("div", "ttl", u.title));
+    const ul = h("ul"); u.items.forEach((t) => ul.append(h("li", "", t))); item.append(ul);
+    log.append(item);
+  });
+}
+
+// ---------------------------------------------------------------- sample screens
+// Small illustrations of each page, built from a few shared pieces. All data is made up.
+const nav = (role) => {
+  const links = { out: ["Find pros"], customer: ["Dashboard", "My projects", "Find pros", "Messages"], pro: ["Dashboard", "Leads & jobs", "Subs", "Find pros", "Messages", "Profile", "Billing"], staff: ["Dashboard", "Messages", "Disputes"] }[role];
+  const right = role === "out" ? `<span class="l">Sign in</span><span class="m-btn">Get started</span>` : `<span class="m-btn s">Sign out</span>`;
+  return `<div class="m-nav"><span class="m-logo"><i></i>Trade Platform</span>${links.map((l) => `<span class="l">${l}</span>`).join("")}<span class="m-sp"></span>${right}</div>`;
+};
+const page = (role, inner) => `${nav(role)}<div class="m-body">${inner}</div>`;
+const head = (t, s, a = "") => `<div class="m-row"><div><div class="m-h">${t}</div>${s ? `<div class="m-sub">${s}</div>` : ""}</div>${a}</div>`;
+const btn = (t, k = "") => `<span class="m-btn ${k}">${t}</span>`;
+const bdg = (t, k = "") => `<span class="m-b ${k}">${t}</span>`;
+const card = (inner, st = "") => `<div class="m-card" style="${st}">${inner}</div>`;
+const inp = (t = "", st = "") => `<div class="m-in" style="${st}">${t}</div>`;
+const fld = (l, v = "", st = "") => `<div style="${st}"><div class="m-lbl">${l}</div>${inp(v)}</div>`;
+const stat = (k, v) => card(`<div class="m-k">${k}</div><div class="m-v">${v}</div>`);
+const stats = (...p) => `<div class="m-grid" style="grid-template-columns:repeat(${p.length},1fr)">${p.map(([k, v]) => stat(k, v)).join("")}</div>`;
+const row = (l, r) => `<div class="m-row">${l}<span style="display:flex;gap:6px;align-items:center">${r}</span></div>`;
+const stars = (n, c) => `<span class="m-star">${"★".repeat(n)}</span> <b>${n}.0</b> <span class="m-sub">(${c})</span>`;
+const ph = (h, w = "100%") => `<div class="m-ph" style="height:${h}px;width:${w}"></div>`;
+const none = (t) => `<div class="m-none"><div><div class="m-h2" style="color:#44403c">No screen</div>${t}</div></div>`;
+const proCard = (n, t, c, r) => card(`${ph(70)}<div class="m-h2" style="margin-top:8px">${n}</div><div class="m-sub">${t}</div><div>${stars(5, c)}</div><div class="m-sub">${r}</div><div style="margin-top:5px">${bdg("Insured", "g")} ${bdg("Licensed", "b")}</div>`, "padding:8px");
+const ms = (n, a, st, k, act = "") => `<div class="m-row" style="padding:7px 0;border-top:1px solid #f5f5f4"><div><b>${n}</b><div>${bdg(st, k)}</div></div><span style="display:flex;gap:8px;align-items:center"><b>${a}</b>${act}</span></div>`;
+
+const MOCKS = {
+  home: () => `${nav("out")}<div style="background:#fff;padding:26px 22px;display:grid;grid-template-columns:1.2fr 1fr;gap:20px;border-bottom:1px solid #e7e5e4"><div><div class="m-k" style="color:#c2410c">From a bookshelf to a whole-house renovation</div><div style="font-weight:700;font-size:25px;line-height:1.15;margin:6px 0">Find the right pro, agree a price, and pay as the work gets done.</div><div class="m-sub">Quotes, budget, messages, milestone payments and reviews in one place.</div><div style="display:flex;gap:6px;margin-top:12px">${inp("What do you need done?", "flex:1")}${btn("Search")}</div><div style="margin-top:8px;display:flex;gap:6px">${btn("Start a project", "d")}${btn("Join as a pro", "s")}</div></div>${card(`<div class="m-k">Example project</div><b>Hall bathroom remodel</b>${ms("Deposit", "$2,400", "Approved and paid out", "g")}${ms("Rough plumbing & tile", "$4,800", "Paid, work in progress", "o")}${ms("Fixtures & walkthrough", "$4,800", "Not paid", "")}`, "background:#fafaf9")}</div><div class="m-body"><div class="m-h2">Browse by trade</div><div class="m-grid" style="grid-template-columns:repeat(4,1fr)">${["General contracting", "Handyman", "Carpentry", "Plumbing", "Electrical", "Painting", "Kitchen remodeling", "Roofing"].map((t) => card(t, "padding:8px 10px;font-weight:500")).join("")}</div></div>`,
+  pros: () => page("customer", `${head("Find pros", "Filter by trade, location, rating and price.")}${card(`<div class="m-grid" style="grid-template-columns:2fr 1fr 1fr 1fr 1fr auto">${inp("tile")}${inp("All trades")}${inp("Denver")}${inp("4 stars and up")}${inp("Any rate")}${btn("Search", "d")}</div>`, "padding:9px")}<div class="m-grid" style="grid-template-columns:repeat(3,1fr)">${proCard("Ridgeline Builders", "Kitchen and bath remodels", 41, "Denver, CO · $85–$120/hr")}${proCard("Alvarez Tile & Stone", "Showers, floors, backsplashes", 27, "Aurora, CO · $70–$95/hr")}${proCard("Bright Coat Painting", "Interior and exterior", 63, "Denver, CO · $55–$70/hr")}</div>`),
+  pro: () => page("customer", `<div class="m-grid" style="grid-template-columns:1fr 210px;gap:16px"><div class="m-grid"><div><div class="m-h">Ridgeline Builders</div><div class="m-sub">Kitchen and bath remodels since 2009</div><div>${stars(5, 41)} &nbsp; <span class="m-sub">Denver, CO</span></div><div style="margin-top:4px">${bdg("Bathroom remodeling")} ${bdg("Tile & stone")} ${bdg("Insured", "g")} ${bdg("Licensed", "b")}</div></div><div class="m-h2">Past work</div><div class="m-grid" style="grid-template-columns:repeat(3,1fr)">${ph(72)}${ph(72)}${ph(72)}</div><div class="m-h2">Pricing and timeline</div>${card(`<div class="m-grid" style="grid-template-columns:1fr 1fr"><div><div class="m-k">Hourly rate</div><b>$85–$120 per hour</b></div><div><div class="m-k">Typical job size</div><b>$8,000–$45,000</b></div><div><div class="m-k">Typical timeline</div><b>Booked 4 to 6 weeks out</b></div><div><div class="m-k">Experience</div><b>16 years</b></div></div>`)}<div class="m-h2">Customer reviews</div>${card(`${row(`<span class="m-star">★★★★★</span>`, `<span class="m-sub">Maya R. · Oct 2, 2026</span>`)}<div>On time, tidy, and the tile work is perfect.</div>`)}</div><div class="m-grid" style="align-content:start">${card(`<b>Request a quote</b>${fld("Project", "Hall bathroom remodel", "margin-top:6px")}${fld("Note to the pro", "", "margin:6px 0")}${btn("Send quote request")}`)}${card(btn("Message Ridgeline Builders", "s"))}</div></div>`),
+  signup: () => `${nav("out")}<div class="m-body" style="max-width:330px;margin:0 auto"><div class="m-h">Create an account</div><div class="m-grid" style="grid-template-columns:1fr 1fr">${card("<b>I need work done</b><div class='m-sub'>Free for homeowners</div>", "padding:8px")}${card("<b>I'm a pro</b><div class='m-sub'>Contractor, sub or handyman</div>", "padding:8px;border-color:#f97316;background:#fff7ed")}</div>${card(`<div class="m-grid">${fld("Your name")}${fld("Business name")}${fld("Email")}${fld("Password")}${btn("Create account")}<div class="m-sub" style="font-size:10px">$29/month after a 30-day free trial, plus a 5% platform fee and card processing.</div></div>`)}</div>`,
+  login: () => `${nav("out")}<div class="m-body" style="max-width:300px;margin:20px auto 0"><div class="m-h">Sign in</div>${card(`<div class="m-grid">${fld("Email")}${fld("Password")}${btn("Sign in")}</div>`)}<div class="m-sub" style="text-align:center">New here? <b style="color:#c2410c">Create an account</b></div></div>`,
+  terms: () => page("out", `<div class="m-h">Terms of service</div><div class="m-card" style="background:#fffbeb;border-color:#fde68a;color:#78350f">Placeholder. Replace with terms reviewed by a lawyer before taking live payments.</div>`),
+  privacy: () => page("out", `<div class="m-h">Privacy policy</div><div class="m-card" style="background:#fffbeb;border-color:#fde68a;color:#78350f">Placeholder. Replace with a privacy policy before launch.</div>`),
+  setup: () => page("out", `<div style="max-width:430px;margin:0 auto;width:100%" class="m-grid">${head("Finish connecting the app", "The site needs a database and a payment processor.")}${card([["Supabase URL and anon key", "Connected", "g"], ["Supabase service-role key", "Connected", "g"], ["Stripe secret key", "Missing", "a"], ["Stripe webhook secret", "Missing", "a"], ["Email notifications (optional)", "Missing", "a"]].map(([l, s, k]) => `<div class="m-row" style="padding:6px 0">${`<b>${l}</b>`}${bdg(s, k)}</div>`).join(""))}</div>`),
+  projects: () => page("customer", `${head("My projects", "Everything planned, in progress and finished.", btn("New project"))}<div class="m-grid" style="grid-template-columns:1fr 1fr">${[["Hall bathroom remodel", "In progress", "o", "Budget $12,000 · Denver, CO"], ["Built-in bookshelf", "Open", "b", "Budget $1,800 · Denver, CO"], ["Fence repair", "Completed", "g", "Budget $900 · Denver, CO"], ["Kitchen backsplash", "Open", "b", "Budget $2,500 · Denver, CO"]].map(([t, s, k, m]) => card(`${row(`<b>${t}</b>`, bdg(s, k))}<div class="m-sub" style="margin-top:4px">${m}</div>`)).join("")}</div>`),
+  new: () => page("customer", `<div style="max-width:440px;margin:0 auto;width:100%" class="m-grid">${head("New project", "Describe what you want done.")}${card(`<div class="m-grid">${fld("Project title", "Built-in bookshelf for the living room")}<div><div class="m-lbl">What do you want done?</div>${inp("", "height:54px")}</div><div class="m-grid" style="grid-template-columns:1fr 1fr">${fld("Main trade", "Carpentry")}${fld("Total budget", "$1,800")}${fld("City", "Denver")}${fld("State", "CO")}</div><div style="text-align:right">${btn("Create project")}</div></div>`)}</div>`),
+  project: () => page("customer", `${head("Hall bathroom remodel", "Bathroom remodeling · Denver, CO", bdg("In progress", "o"))}<div class="m-h2">Work and payments</div>${card(`${row(`<div><b>Ridgeline Builders</b><div class="m-sub">$12,000 total · $7,200 paid</div></div>`, btn("Message", "s"))}${ms("1. Deposit", "$2,400", "Approved and paid out", "g")}${ms("2. Rough plumbing & tile", "$4,800", "On hold: disputed", "r")}<div class="m-hold"><b>Payment on hold: problem reported</b><div class="m-sub">The pro offered a $600 refund.</div><div style="margin-top:5px;display:flex;gap:5px">${btn("Accept $600 refund")}${btn("Release full payment", "s")}${btn("Ask the platform to decide", "s")}</div></div>${ms("3. Fixtures & walkthrough", "$4,800", "Not paid", "", btn("Pay"))}`)}<div class="m-h2">Budget tracker</div>${stats(["Budget", "$12,000"], ["Planned", "$12,650"], ["Paid", "$7,200"], ["Left in budget", "-$650"])}`),
+  dash: () => page("customer", `${head("Welcome, Maya", "Your projects at a glance.", btn("New project"))}${stats(["Active projects", "2"], ["Quotes to review", "3"], ["Work to approve", "1"], ["Paid so far", "$7,200"])}<div class="m-h2">Recent projects</div>${[["Hall bathroom remodel", `${bdg("1 to approve", "o")} ${bdg("In progress", "o")}`], ["Built-in bookshelf", `${bdg("3 to review", "b")} ${bdg("Open", "b")}`], ["Fence repair", bdg("Completed", "g")]].map(([t, b]) => card(row(`<div><b>${t}</b><div class="m-sub">Created Oct 28, 2026</div></div>`, b))).join("")}`),
+  msgs: () => page("customer", `<div style="max-width:440px;margin:0 auto;width:100%" class="m-grid"><div class="m-h">Messages</div>${[["Ridgeline Builders", "We can start the tile on Monday.", "2 new"], ["Alvarez Tile & Stone", "You: Thanks, I'll take a look at the quote.", ""], ["Bright Coat Painting", "Happy to quote once the drywall is done.", ""]].map(([n, t, u]) => card(row(`<div><b>${n}</b><div class="m-sub">${t}</div></div>`, u ? `<span class="m-b" style="background:#ea580c;color:#fff">${u}</span>` : ""))).join("")}</div>`),
+  thread: () => page("customer", `<div style="max-width:440px;margin:0 auto;width:100%" class="m-grid"><div class="m-h">Ridgeline Builders</div>${card(`<div style="display:flex;flex-direction:column;gap:6px;min-height:220px"><div class="m-you">Hi Maya, rough plumbing passed inspection today.</div><div class="m-me">Great. When does tile start?</div><div class="m-you">We can start the tile on Monday.</div><span class="m-sp"></span><div style="display:flex;gap:6px;border-top:1px solid #e7e5e4;padding-top:8px">${inp("Write a message…", "flex:1")}${btn("Send")}</div></div>`)}</div>`),
+  edit: () => page("pro", `<div style="max-width:520px;margin:0 auto;width:100%" class="m-grid">${head("Your profile", "What customers and other contractors see.", btn("View public profile", "s"))}${card(`<div class="m-grid"><div class="m-h2">About your business</div><div class="m-grid" style="grid-template-columns:1fr 1fr">${fld("Business name", "Ridgeline Builders")}${fld("Your name", "Sam Ortega")}</div>${fld("Headline", "Kitchen and bath remodels since 2009")}<div class="m-lbl">Trades you offer</div><div class="m-grid" style="grid-template-columns:repeat(3,1fr)">${["☑ Bathroom remodeling", "☑ Tile & stone", "☐ Plumbing", "☑ Kitchen remodeling", "☐ Electrical", "☐ Painting"].map((t) => `<span>${t}</span>`).join("")}</div></div>`)}${card(`<div class="m-grid"><div class="m-h2">Pricing and timeline</div><div class="m-grid" style="grid-template-columns:repeat(4,1fr)">${fld("Hourly from ($)", "85")}${fld("Hourly to ($)", "120")}${fld("Job from ($)", "8000")}${fld("Job to ($)", "45000")}</div></div>`)}</div>`),
+  jobs: () => page("pro", `${head("Leads & jobs", "Quote requests and the jobs you have won.")}<div class="m-h2">Active jobs <span class="m-sub">(1)</span></div>${card(row(`<div><b>Hall bathroom remodel</b><div class="m-sub">Maya R. · Denver, CO</div></div>`, `<b>$12,000</b>${bdg("Accepted", "g")}`))}<div class="m-h2">New requests <span class="m-sub">(2)</span></div>${card(row(`<div><b>Basement bathroom addition</b><div class="m-sub">Jordan P. · Lakewood, CO</div></div>`, bdg("Awaiting quote", "a")))}${card(row(`<div><b>Shower re-tile</b><div class="m-sub">Priya S. · Denver, CO</div></div>`, bdg("Awaiting quote", "a")))}<div class="m-h2">Quotes sent <span class="m-sub">(1)</span></div>${card(row(`<div><b>Kitchen backsplash</b><div class="m-sub">Maya R. · Denver, CO</div></div>`, `<b>$2,300</b>${bdg("Quote sent", "b")}`))}`),
+  job: () => page("pro", `<div class="m-grid" style="grid-template-columns:1fr 225px;gap:14px"><div class="m-grid">${head("Hall bathroom remodel", "Maya R. · Denver, CO · Budget $12,000", bdg("Accepted", "g"))}${card(`${row(`<div class="m-h2">Your accepted quote</div>`, bdg("Accepted", "g"))}<div><span class="m-v">$12,000</span> <span class="m-sub">You receive about $8,251 after the 5% fee, card processing and $2,800 to subs</span></div>${ms("1. Deposit", "$2,400", "Approved and paid out", "g")}${ms("2. Rough plumbing & tile", "$4,800", "On hold: disputed", "r")}<div class="m-hold"><b>Payment on hold: problem reported</b><div>Two floor tiles are cracked near the door.</div><div style="display:flex;gap:5px;margin-top:5px">${inp("Your reply", "flex:1")}${inp("Refund offer $", "width:90px")}${btn("Send reply")}</div></div>${ms("3. Fixtures & walkthrough", "$4,800", "Not paid", "")}`)}</div>${card(`<div class="m-h2">Subs on this job</div>${row(`<div><b>Alvarez Plumbing</b><div class="m-sub">$2,800 · rough plumbing</div></div>`, bdg("Accepted", "g"))}<div style="border-top:1px solid #f5f5f4;margin-top:8px;padding-top:8px" class="m-grid"><b>Add a sub</b><div style="display:flex;gap:5px">${inp("Search all pros", "flex:1")}${btn("Search", "s")}</div>${inp("Choose a pro")}${inp("Their part of the job")}${inp("$ amount")}${btn("Invite to this job", "d")}</div>`)}</div>`),
+  subs: () => page("pro", `${head("Subs", "Pros you work with, and jobs you have been brought onto.", btn("Find pros"))}<div class="m-h2">Jobs you are subbing on</div>${card(`${row(`<div><b>Garage conversion</b><div class="m-sub">For Summit General Contracting · Arvada, CO</div><div>Your part: bathroom rough-in</div></div>`, `<div style="text-align:right"><div class="m-v">$3,400</div>${bdg("Invited", "a")}</div>`)}<div style="margin-top:6px;display:flex;gap:5px">${btn("Accept")}${btn("Decline", "s")}${btn("Message contractor", "s")}</div>`)}<div class="m-h2">Your favorite subs</div><div class="m-grid" style="grid-template-columns:1fr 1fr">${[["Alvarez Plumbing", "Residential plumbing"], ["Volt Line Electric", "Service upgrades and rewires"]].map(([n, t]) => card(`<b>${n}</b><div class="m-sub">${t}</div><div>${stars(5, 12)}</div><div style="margin-top:5px;display:flex;gap:5px">${btn("Message", "s")}${btn("Remove", "s")}</div>`)).join("")}</div>`),
+  billing: () => page("pro", `${head("Billing", "Your membership, payouts and earnings.")}<div class="m-grid" style="grid-template-columns:1fr 1fr">${card(`${row(`<div class="m-h2">Membership</div>`, bdg("Free trial", "g"))}<div class="m-v">$29<span class="m-sub" style="font-size:11px;font-weight:400">/month</span></div><div class="m-sub">Your free trial ends Dec 18, 2026.</div><div style="margin-top:6px">${btn("Manage membership", "s")}</div>`)}${card(`${row(`<div class="m-h2">Payouts</div>`, bdg("Ready", "g"))}<div class="m-sub">Money from approved milestones goes to your bank through Stripe.</div><div style="margin-top:6px">${btn("Open payout dashboard", "s")}</div>`)}</div>${stats(["Paid out", "$2,210"], ["On the way", "$0"])}${card(`<div class="m-grid" style="grid-template-columns:1fr 2fr 1fr 1fr 1fr" ><span class="m-k">Date</span><span class="m-k">Job</span><span class="m-k">Role</span><span class="m-k">Amount</span><span class="m-k">Status</span><span>Nov 4, 2026</span><span>Hall bathroom remodel · Deposit</span><span>Lead</span><b>$1,650</b><span>${bdg("Paid", "g")}</span><span>Oct 20, 2026</span><span>Garage conversion · Rough-in</span><span>Sub</span><b>$560</b><span>${bdg("Paid", "g")}</span></div>`)}`),
+  admin: () => page("staff", `${head("Disputes", "Platform staff only. Decide how a disputed payment is split.")}<div class="m-h2">Open <span class="m-sub">(1)</span></div>${card(`${row(`<div><b>Hall bathroom remodel · Rough plumbing & tile</b><div class="m-sub">Maya R. vs Ridgeline Builders · opened Nov 16, 2026</div></div>`, `<div style="text-align:right"><div class="m-v">$4,800</div>${bdg("Needs your decision", "r")}</div>`)}<div class="m-grid" style="grid-template-columns:1fr 1fr;margin-top:8px;border-top:1px solid #f5f5f4;padding-top:8px"><div><div class="m-k">Customer says</div>Two floor tiles are cracked near the door and the grout color is wrong.</div><div><div class="m-k">Pro says</div>Tiles cracked after install. We will replace them. <b>Offered refund: $600</b></div></div><div class="m-grid" style="grid-template-columns:130px 1fr auto;align-items:end;margin-top:8px">${fld("Refund to customer ($)", "600.00")}${fld("Decision note", "Replace tiles; $600 back for the delay")}${btn("Decide", "d")}</div>`)}`),
+  checkout: () => `<div class="m-none"><div style="width:300px;text-align:left">${card(`<div class="m-k">Hosted by Stripe</div><div class="m-h2" style="margin-top:4px">Hall bathroom remodel: Deposit</div><div class="m-v">$2,400.00</div><div class="m-grid" style="margin-top:8px">${inp("Card number")}<div class="m-grid" style="grid-template-columns:1fr 1fr">${inp("MM / YY")}${inp("CVC")}</div>${btn("Pay", "d")}</div><div class="m-sub" style="margin-top:6px;font-size:10px">Stripe's own page. Card details never touch the site.</div>`)}</div></div>`,
+  connect: () => `<div class="m-none"><div style="width:300px;text-align:left">${card(`<div class="m-k">Hosted by Stripe</div><div class="m-h2" style="margin-top:4px">Set up payouts</div><div class="m-grid" style="margin-top:8px">${inp("Legal name")}${inp("Date of birth")}${inp("Bank account for payouts")}${btn("Continue", "d")}</div><div class="m-sub" style="margin-top:6px;font-size:10px">Stripe verifies the pro and stores their bank details.</div>`)}</div></div>`,
+  portal: () => `<div class="m-none"><div style="width:300px;text-align:left">${card(`<div class="m-k">Hosted by Stripe</div><div class="m-h2" style="margin-top:4px">Trade Platform pro membership</div><div>$29.00 per month</div><div class="m-grid" style="margin-top:8px">${btn("Update payment method", "s")}${btn("View invoices", "s")}${btn("Cancel membership", "s")}</div>`)}</div></div>`,
+  hook: () => none("<div>Stripe calls this address in the background. Nobody sees it.</div>"),
+  cb: () => none("<div>The confirmation link passes through here and lands on the dashboard.</div>"),
+  mail: () => `<div class="m-none" style="background:#f5f5f4"><div style="width:360px;text-align:left"><div class="m-sub" style="margin-bottom:6px"><b style="color:#1c1917">New quote for Hall bathroom remodel: $12,000</b><br>From Trade Platform</div><b>Trade Platform</b>${card(`<div>Ridgeline Builders sent a quote of $12,000 for "Hall bathroom remodel".</div><div style="margin:8px 0">Open your project to see the scope, timeline and payment milestones, and to compare it with your other quotes.</div>${btn("Review the quote")}`, "margin-top:8px")}<div class="m-sub" style="font-size:10px;margin-top:6px">You are receiving this because of activity on your Trade Platform account.</div></div></div>`,
+};
+
+function mockEl(id, big) {
+  const frame = h("div", "frame" + (big ? " big" : ""));
+  const m = h("div", "mock");
+  m.setAttribute("aria-hidden", "true");
+  m.innerHTML = MOCKS[id]();
+  frame.append(m);
+  return frame;
+}
+
+// Mocks are drawn 720px wide and scaled down to fit whatever frame they sit in.
+function fit() {
+  document.querySelectorAll(".frame").forEach((f) => {
+    const m = f.firstElementChild, s = f.clientWidth / 720;
+    m.style.transform = `scale(${s})`;
+    f.style.height = Math.round(m.offsetHeight * s) + "px";
+  });
+}
+
+function drawShots() {
+  const shot = document.getElementById("shot");
+  shot.replaceChildren();
+  const n = byId[selected];
+  const hd = h("div", "shot-head");
+  hd.append(h("h2", "", n ? `Sample screen: ${n.name}` : "Sample screen"), h("span", "note", n ? n.route : ""));
+  shot.append(hd);
+  if (n) shot.append(mockEl(n.id, true));
+  else shot.append(h("p", "empty", "Select a page on the map, or a sample below, to see a larger illustration of it here."));
+
+  const gallery = document.getElementById("gallery");
+  gallery.replaceChildren();
+  NODES.forEach((node) => {
+    const b = h("button", "thumb");
+    b.type = "button";
+    b.setAttribute("aria-pressed", String(node.id === selected));
+    b.setAttribute("aria-label", `Show sample screen for ${node.name}`);
+    const cap = h("div", "cap");
+    cap.append(node.name, h("small", "", node.route));
+    b.append(mockEl(node.id, false), cap);
+    b.addEventListener("click", () => {
+      selected = node.id;
+      render();
+      document.getElementById("shot").scrollIntoView({ block: "nearest", behavior: "smooth" });
+    });
+    gallery.append(b);
+  });
+}
+
+function render() { draw(); drawDetail(); drawChrome(); drawShots(); fit(); }
+render();
+window.addEventListener("resize", fit);
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
+</script>
