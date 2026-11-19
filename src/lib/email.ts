@@ -21,14 +21,15 @@ const escape = (s: string) =>
 
 function render({ lines, path, cta }: Mail) {
   const url = path ? `${APP_URL}${path}` : APP_URL;
-  const html = `<!doctype html><html><body style="margin:0;background:#f2faf4;font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;color:#1c1917">
-<div style="max-width:520px;margin:0 auto;padding:32px 20px">
-  <p style="font-weight:700;font-size:16px;margin:0 0 20px">${escape(APP_NAME)}</p>
-  <div style="background:#ffffff;border:1px solid #e7e5e4;border-radius:12px;padding:24px">
-    ${lines.map((l) => `<p style="margin:0 0 14px;font-size:15px;line-height:1.5">${escape(l)}</p>`).join("")}
-    <a href="${url}" style="display:inline-block;margin-top:6px;background:#a6dbb4;color:#12281b;text-decoration:none;font-weight:600;font-size:14px;padding:10px 18px;border-radius:8px">${escape(cta ?? "Open " + APP_NAME)}</a>
+  const font = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
+  const html = `<!doctype html><html><body style="margin:0;background:#f2faf4;font-family:${font};color:#12281b">
+<div style="max-width:480px;margin:0 auto;padding:32px 16px">
+  <p style="font-weight:700;font-size:20px;margin:0 0 20px;text-align:center;color:#234a32">${escape(APP_NAME)}</p>
+  <div style="background:#ffffff;border:1px solid #c6e9cf;border-radius:16px;padding:32px 28px">
+    ${lines.map((l) => `<p style="margin:0 0 14px;font-size:16px;line-height:1.55;color:#2c5d3e">${escape(l)}</p>`).join("")}
+    <a href="${url}" style="display:inline-block;margin-top:8px;background:#37774d;color:#ffffff;text-decoration:none;font-weight:600;font-size:16px;padding:14px 28px;border-radius:10px">${escape(cta ?? "Open " + APP_NAME)}</a>
   </div>
-  <p style="margin:16px 0 0;font-size:12px;color:#78716c">You are receiving this because of activity on your ${escape(APP_NAME)} account.</p>
+  <p style="margin:20px 0 0;font-size:12px;line-height:1.6;text-align:center;color:#4a9663">You are receiving this because of activity on your ${escape(APP_NAME)} account.</p>
 </div></body></html>`;
   const text = `${lines.join("\n\n")}\n\n${cta ?? "Open " + APP_NAME}: ${url}`;
   return { html, text };

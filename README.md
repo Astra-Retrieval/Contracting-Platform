@@ -519,6 +519,17 @@ Nothing in this list is built yet unless it says so.
 - [ ] **Estimate templates** for common jobs, to quote faster.
 - [ ] **Job status board**: leads, quoted, scheduled, in progress, waiting on payment, done.
 
+### Launch area and growth
+
+- [ ] State on the site that Crew Orchard is **starting in South Carolina** and will soon
+      expand to other states.
+- [ ] A **"Join the waitlist" button for pros outside South Carolina**, which collects their
+      name, email, trade, and state so they can be told when their state opens.
+- [ ] Create a **service email** address (for example `support@creworchard.com`) for
+      customer and pro questions, and show it on the site and in emails.
+- [ ] Build out the **go-to-market strategy**: how the first pros and customers in South
+      Carolina are found, and the order in which other states open.
+
 ### Before launch
 
 - [ ] Check contractor licensing rules for the launch state.

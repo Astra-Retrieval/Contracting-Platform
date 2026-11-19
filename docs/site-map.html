@@ -206,6 +206,8 @@ aside { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 // To record new work: add an entry to UPDATES, then set `added` on new pages or add a
 // note under `changes` on pages that changed. The newest update is highlighted by default.
 const UPDATES = [
+  { n: 7, date: "Nov 19, 2026", title: "Live keys, branded emails, Astra Retrieval footer",
+    items: ["The live site now runs on live Stripe keys, with email connected", "Branded sign-up confirmation email, and notification emails restyled to match", "Footer on every page now says Crew Orchard is an Astra Retrieval company", "Setup check also shows whether the staff address for dispute alerts is set", "README to-dos: South Carolina launch note, waitlist for pros in other states, service email, go-to-market strategy"] },
   { n: 1, date: "Nov 18, 2026", title: "First build",
     items: ["All customer and pro pages", "Search, quotes, milestones, budget tracker", "Messaging, favorite subs, reviews", "Stripe membership, payouts and milestone payments"] },
   { n: 2, date: "Nov 18, 2026", title: "Disputes, emails, any-sub invites, fees",
@@ -234,7 +236,7 @@ const NODES = [
   { id: "home", lane: "public", name: "Home", route: "/", added: 1, who: "Anyone",
     about: "Landing page: what the platform does, browse by trade, how it works for each side, and pro pricing.",
     does: ["Search for a pro by keyword", "Jump to a trade", "Start a project or join as a pro"],
-    changes: { 2: "Pricing block now says 5% plus card processing.", 4: "New pastel look: mint background, soft green buttons, and trade tiles in six pastel tints. The same palette applies to every page." } },
+    changes: { 2: "Pricing block now says 5% plus card processing.", 4: "New pastel look: mint background, soft green buttons, and trade tiles in six pastel tints. The same palette applies to every page." , 7: "Footer, here and on every page, now reads: Crew Orchard, an Astra Retrieval company." } },
   { id: "pros", lane: "public", name: "Find pros", route: "/pros", added: 1, who: "Anyone",
     about: "Search results for contractors, subs and handymen.",
     does: ["Filter by trade, location, rating and hourly rate", "Open a profile", "Arrive from a project to pick pros to quote it"] },
@@ -250,7 +252,8 @@ const NODES = [
   { id: "terms", lane: "public", name: "Terms", route: "/terms", added: 1, who: "Anyone", about: "Placeholder until real terms are written.", does: [] },
   { id: "privacy", lane: "public", name: "Privacy", route: "/privacy", added: 1, who: "Anyone", about: "Placeholder until a real policy is written.", does: [] },
   { id: "setup", lane: "public", name: "Setup check", route: "/setup", added: 1, who: "Anyone",
-    about: "Shows which connections (Supabase, Stripe) are still missing. Every data page sends you here until the database is connected.", does: ["See what is connected", "Follow the setup steps"] },
+    about: "Shows which connections (Supabase, Stripe) are still missing. Every data page sends you here until the database is connected.", does: ["See what is connected", "Follow the setup steps"],
+    changes: { 7: "New row: staff address for dispute alerts (ADMIN_EMAIL)." } },
 
   // customer
   { id: "projects", lane: "customer", name: "My projects", route: "/projects", added: 1, who: "Customers",
