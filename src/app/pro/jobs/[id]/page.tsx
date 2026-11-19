@@ -194,6 +194,11 @@ export default async function ProJobPage({
             <p className="whitespace-pre-wrap text-stone-700">
               {project.description || "No description provided."}
             </p>
+            {request.source === "pro" && (
+              <p className="mt-3 text-sm text-stone-600">
+                You found this project under Find work. The customer has been told you are preparing a quote.
+              </p>
+            )}
             {request.message && (
               <p className="mt-4 rounded-lg bg-stone-50 p-3 text-sm text-stone-700">
                 <span className="font-medium">Note to you:</span> {request.message}
@@ -278,6 +283,7 @@ export default async function ProJobPage({
                         dispute={disputeFor.get(m.id) as Dispute}
                         role="pro"
                         amountCents={Number(m.amount_cents)}
+                        viewerId={viewer.id}
                       />
                     )}
                   </li>

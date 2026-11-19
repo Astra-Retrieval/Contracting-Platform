@@ -51,3 +51,13 @@ export function flash(path: string, kind: "error" | "notice", message: string): 
   const sep = path.includes("?") ? "&" : "?";
   redirect(`${path}${sep}${kind}=${encodeURIComponent(message)}`);
 }
+
+/** Photo paths sent with a form. Only paths inside the sender's own storage folder count. */
+export function photoPaths(formData: FormData, userId: string, max = 6) {
+  return ownPhotoPaths(formData.getAll("photo_path").map(String), userId, max);
+}
+export function ownPhotoPaths(paths: string[], userId: string, max = 6) {
+  return [...new Set(paths)]
+    .filter((p) => p.startsWith(`${userId}/`) && !p.includes("..") && p.length < 300)
+    .slice(0, max);
+}

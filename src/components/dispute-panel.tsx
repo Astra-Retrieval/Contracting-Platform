@@ -1,4 +1,5 @@
 import { escalateDispute, resolveDisputeAsCustomer, respondToDispute } from "@/app/actions/disputes";
+import { PhotoField, PhotoStrip } from "@/components/photo-picker";
 import { SubmitButton } from "@/components/submit-button";
 import { Badge, inputCls } from "@/components/ui";
 import { money, shortDate } from "@/lib/format";
@@ -7,7 +8,9 @@ export type Dispute = {
   id: string;
   milestone_id: string;
   reason: string;
+  photo_paths?: string[];
   pro_response: string;
+  pro_photo_paths?: string[];
   proposed_refund_cents: number | null;
   status: string;
   refund_cents: number | null;
@@ -21,10 +24,13 @@ export function DisputePanel({
   dispute,
   role,
   amountCents,
+  viewerId,
 }: {
   dispute: Dispute;
   role: "customer" | "pro";
   amountCents: number;
+  /** Needed on the pro's side, so reply photos upload to their own folder. */
+  viewerId?: string;
 }) {
   const open = ["open", "escalated"].includes(dispute.status);
   const offer = dispute.proposed_refund_cents;
@@ -51,6 +57,7 @@ export function DisputePanel({
             {role === "customer" ? "What you reported" : "Customer's report"}
           </dt>
           <dd className="mt-0.5 whitespace-pre-wrap text-stone-800">{dispute.reason}</dd>
+          <PhotoStrip paths={dispute.photo_paths ?? []} />
         </div>
         {dispute.pro_response && (
           <div>
@@ -58,6 +65,7 @@ export function DisputePanel({
               {role === "pro" ? "Your reply" : "The pro's reply"}
             </dt>
             <dd className="mt-0.5 whitespace-pre-wrap text-stone-800">{dispute.pro_response}</dd>
+            <PhotoStrip paths={dispute.pro_photo_paths ?? []} />
           </div>
         )}
         {open && offer != null && (
@@ -118,6 +126,9 @@ export function DisputePanel({
               placeholder="Your side, and how you will put it right"
               className={inputCls}
             />
+            {viewerId && (
+              <PhotoField userId={viewerId} folder={`disputes/${dispute.id}`} label="Add photos" />
+            )}
             <div className="flex flex-wrap items-center gap-2">
               <input
                 name="proposed_refund"

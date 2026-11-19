@@ -2,7 +2,7 @@
 
 import { requireAdmin, requireCustomer, requirePro, requireViewer } from "@/lib/auth";
 import { displayName, notify, notifyAdmin, projectTitle } from "@/lib/email";
-import { flash, money, text, toCents } from "@/lib/format";
+import { flash, money, photoPaths, text, toCents } from "@/lib/format";
 import { announceRefund, closeDisputedMilestone } from "@/lib/payments";
 import { isStripeConfigured } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/server";
@@ -79,6 +79,7 @@ export async function openDispute(formData: FormData) {
     customer_id: viewer.id,
     pro_id: quote.pro_id,
     reason,
+    photo_paths: photoPaths(formData, viewer.id),
   });
   if (error) {
     await admin.from("milestones").update({ status: milestone.status }).eq("id", milestoneId);
@@ -126,7 +127,12 @@ export async function respondToDispute(formData: FormData) {
 
   await admin
     .from("disputes")
-    .update({ pro_response: response, proposed_refund_cents: offer })
+    .update({
+      pro_response: response,
+      proposed_refund_cents: offer,
+      // New photos are added to any sent with an earlier reply.
+      pro_photo_paths: [...new Set([...(dispute.pro_photo_paths ?? []), ...photoPaths(formData, viewer.id)])].slice(0, 12),
+    })
     .eq("id", dispute.id);
 
   await notify(dispute.customer_id, {

@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { requireViewer } from "@/lib/auth";
 import { displayName, notify } from "@/lib/email";
-import { flash, text } from "@/lib/format";
+import { flash, ownPhotoPaths, text } from "@/lib/format";
 import { createAdminClient, createClient } from "@/lib/supabase/server";
 
 /** Open the thread between the viewer and another member, creating it if needed. */
@@ -35,10 +35,11 @@ export async function startConversation(formData: FormData) {
   redirect(`/messages/${created.id}`);
 }
 
-export async function sendMessage(conversationId: string, body: string) {
+export async function sendMessage(conversationId: string, body: string, photoPathList: string[] = []) {
   const viewer = await requireViewer();
   const trimmed = body.trim();
-  if (!trimmed) return { error: "Write a message first." };
+  const photos = ownPhotoPaths(photoPathList, viewer.id);
+  if (!trimmed && !photos.length) return { error: "Write a message or add a photo first." };
   if (trimmed.length > 5000) return { error: "That message is too long." };
 
   // Row-level security only allows this for members of the conversation.
@@ -52,8 +53,8 @@ export async function sendMessage(conversationId: string, body: string) {
     .is("read_at", null);
   const { data, error } = await supabase
     .from("messages")
-    .insert({ conversation_id: conversationId, sender_id: viewer.id, body: trimmed })
-    .select("id, sender_id, body, created_at")
+    .insert({ conversation_id: conversationId, sender_id: viewer.id, body: trimmed, photo_paths: photos })
+    .select("id, sender_id, body, photo_paths, created_at")
     .single();
   if (error) return { error: "Message could not be sent." };
 
@@ -68,11 +69,17 @@ export async function sendMessage(conversationId: string, body: string) {
       const name = await displayName(viewer.id);
       await notify(otherId, {
         subject: `New message from ${name}`,
-        lines: [`${name} sent you a message:`, trimmed.length > 300 ? `${trimmed.slice(0, 300)}…` : trimmed],
+        lines: [
+          `${name} sent you a message:`,
+          ...(trimmed ? [trimmed.length > 300 ? `${trimmed.slice(0, 300)}…` : trimmed] : []),
+          ...(photos.length ? [photos.length === 1 ? "1 photo attached." : `${photos.length} photos attached.`] : []),
+        ],
         path: `/messages/${conversationId}`,
         cta: "Reply",
       });
     }
   }
-  return { message: data as { id: string; sender_id: string; body: string; created_at: string } };
+  return {
+    message: data as { id: string; sender_id: string; body: string; photo_paths: string[]; created_at: string },
+  };
 }

@@ -10,10 +10,11 @@ export type Viewer = { id: string; email: string; role: Role; fullName: string; 
 export const getViewer = cache(async (): Promise<Viewer | null> => {
   if (!isSupabaseConfigured) return null;
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return null;
+  // Checks the session token's signature on this server, with no trip to the auth server.
+  const { data } = await supabase.auth.getClaims();
+  const claims = data?.claims;
+  if (!claims?.sub) return null;
+  const user = { id: claims.sub, email: typeof claims.email === "string" ? claims.email : "" };
   const { data: profile } = await supabase
     .from("profiles")
     .select("role, full_name, is_admin")
@@ -21,7 +22,7 @@ export const getViewer = cache(async (): Promise<Viewer | null> => {
     .maybeSingle();
   return {
     id: user.id,
-    email: user.email ?? "",
+    email: user.email,
     role: (profile?.role as Role) ?? "customer",
     fullName: profile?.full_name ?? "",
     isAdmin: Boolean(profile?.is_admin),

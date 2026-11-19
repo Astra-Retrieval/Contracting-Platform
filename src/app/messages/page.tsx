@@ -23,7 +23,7 @@ export default async function MessagesPage({ searchParams }: { searchParams: Sea
     ids.length
       ? supabase
           .from("messages")
-          .select("conversation_id, sender_id, body, read_at, created_at")
+          .select("conversation_id, sender_id, body, photo_paths, read_at, created_at")
           .in("conversation_id", ids)
           .order("created_at", { ascending: false })
           .limit(400)
@@ -58,7 +58,7 @@ export default async function MessagesPage({ searchParams }: { searchParams: Sea
                     <div className="min-w-0">
                       <p className="font-semibold text-stone-900">{names.get(other(c)) ?? "Member"}</p>
                       <p className="truncate text-sm text-stone-600">
-                        {last ? `${last.sender_id === viewer.id ? "You: " : ""}${last.body}` : "No messages yet"}
+                        {last ? `${last.sender_id === viewer.id ? "You: " : ""}${last.body || "Sent a photo"}` : "No messages yet"}
                       </p>
                     </div>
                     {count > 0 && (

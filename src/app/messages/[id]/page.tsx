@@ -24,7 +24,7 @@ export default async function ConversationPage({ params }: { params: Promise<{ i
   const [{ data: messages }, names, { data: otherProfile }] = await Promise.all([
     supabase
       .from("messages")
-      .select("id, sender_id, body, created_at")
+      .select("id, sender_id, body, photo_paths, created_at")
       .eq("conversation_id", id)
       .order("created_at")
       .limit(500),

@@ -3,10 +3,17 @@ import { notFound } from "next/navigation";
 import { openDispute } from "@/app/actions/disputes";
 import { startConversation } from "@/app/actions/messages";
 import { payMilestone } from "@/app/actions/payments";
-import { addBudgetItem, addProjectPhoto, deleteBudgetItem, setProjectStatus } from "@/app/actions/projects";
+import {
+  addBudgetItem,
+  addProjectPhoto,
+  deleteBudgetItem,
+  setProjectStatus,
+  setProjectVisibility,
+} from "@/app/actions/projects";
 import { acceptQuote, rejectQuote } from "@/app/actions/quotes";
 import { submitReview } from "@/app/actions/reviews";
 import { DisputePanel, type Dispute } from "@/components/dispute-panel";
+import { PhotoField } from "@/components/photo-picker";
 import { PhotoUploader } from "@/components/photo-uploader";
 import { SubmitButton } from "@/components/submit-button";
 import {
@@ -107,7 +114,7 @@ export default async function ProjectPage({
       ? supabase.from("categories").select("name").eq("id", project.category_id).maybeSingle()
       : Promise.resolve({ data: null }),
     supabase.from("project_photos").select("id, storage_path").eq("project_id", id).order("created_at"),
-    supabase.from("quote_requests").select("id, pro_id, status, created_at").eq("project_id", id).order("created_at"),
+    supabase.from("quote_requests").select("id, pro_id, status, source, created_at").eq("project_id", id).order("created_at"),
     supabase.from("quotes").select("*").eq("project_id", id).order("created_at"),
     supabase.from("milestones").select("*").eq("project_id", id).order("sort"),
     supabase.from("project_subs").select("id, quote_id, sub_id, scope, status").eq("project_id", id).eq("status", "accepted"),
@@ -296,6 +303,11 @@ export default async function ProjectPage({
                                 placeholder="What went wrong? Be specific: what was agreed and what you got."
                                 className={inputCls}
                               />
+                              <PhotoField
+                                userId={viewer.id}
+                                folder={`disputes/${m.id}`}
+                                label="Add photos of the problem"
+                              />
                               <p className="text-xs text-stone-500">
                                 The pro is asked to respond and can offer to fix it or refund part of
                                 the {money(m.amount_cents)} you paid. You can ask our team to decide if you
@@ -351,6 +363,32 @@ export default async function ProjectPage({
         >
           Quotes
         </SectionTitle>
+
+        {project.status === "open" && (
+          <form
+            action={setProjectVisibility}
+            className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm"
+          >
+            <input type="hidden" name="project_id" value={id} />
+            <input type="hidden" name="open_to_pros" value={project.open_to_pros ? "false" : "true"} />
+            <p className="text-stone-700">
+              {project.open_to_pros ? (
+                <>
+                  <span className="font-medium text-stone-900">Open to all pros.</span> Pros can find this
+                  project in their feed and offer a quote. You can also invite pros yourself.
+                </>
+              ) : (
+                <>
+                  <span className="font-medium text-stone-900">Invite only.</span> Only pros you ask for a
+                  quote can see this project.
+                </>
+              )}
+            </p>
+            <SubmitButton variant="secondary" small pendingText="Saving…">
+              {project.open_to_pros ? "Make invite only" : "Open to all pros"}
+            </SubmitButton>
+          </form>
+        )}
 
         {(requests ?? []).length === 0 ? (
           <Empty title="No quote requests yet">
@@ -424,7 +462,9 @@ export default async function ProjectPage({
 
                       {!quote && r.status === "pending" && (
                         <p className="mt-3 text-sm text-stone-500">
-                          Requested {shortDate(r.created_at)}. Waiting for their quote.
+                          {r.source === "pro"
+                            ? `Found your project on ${shortDate(r.created_at)} and is preparing a quote.`
+                            : `Requested ${shortDate(r.created_at)}. Waiting for their quote.`}
                         </p>
                       )}
 

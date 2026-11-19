@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { signOut } from "@/app/actions/auth";
 import { Logo } from "@/components/logo";
 import { ButtonLink, buttonCls } from "@/components/ui";
@@ -14,6 +15,7 @@ const customerLinks = [
 ];
 const proLinks = [
   ["/dashboard", "Dashboard"],
+  ["/pro/find-work", "Find work"],
   ["/pro/jobs", "Leads & jobs"],
   ["/pro/subs", "Subs"],
   ["/pros", "Find pros"],
@@ -22,7 +24,10 @@ const proLinks = [
   ["/pro/billing", "Billing"],
 ];
 
-async function unreadCount(viewerId: string) {
+const badgeCls = "ml-1.5 rounded-full bg-brand-300 px-1.5 py-0.5 text-[10px] font-bold text-brand-950";
+
+// The counts load on their own, so a slow count never holds up the page.
+async function UnreadBadge({ viewerId }: { viewerId: string }) {
   const supabase = await createClient();
   // Row-level security already limits this to the viewer's conversations.
   const { count } = await supabase
@@ -30,7 +35,19 @@ async function unreadCount(viewerId: string) {
     .select("id", { count: "exact", head: true })
     .neq("sender_id", viewerId)
     .is("read_at", null);
-  return count ?? 0;
+  return count ? <span className={badgeCls}>{count}</span> : null;
+}
+
+/** Quote requests a pro has not answered yet. */
+async function NewRequestsBadge({ viewerId }: { viewerId: string }) {
+  const supabase = await createClient();
+  const { count } = await supabase
+    .from("quote_requests")
+    .select("id", { count: "exact", head: true })
+    .eq("pro_id", viewerId)
+    .eq("status", "pending")
+    .eq("source", "customer");
+  return count ? <span className={badgeCls}>{count}</span> : null;
 }
 
 export async function Nav() {
@@ -38,7 +55,6 @@ export async function Nav() {
   const links = viewer
     ? [...(viewer.role === "pro" ? proLinks : customerLinks), ...(viewer.isAdmin ? [["/admin/disputes", "Disputes"]] : [])]
     : [["/pros", "Find pros"]];
-  const unread = viewer ? await unreadCount(viewer.id) : 0;
 
   return (
     <header className="sticky top-0 z-20 border-b border-stone-200 bg-white/90 backdrop-blur">
@@ -55,10 +71,15 @@ export async function Nav() {
               className="rounded-md px-2.5 py-1.5 font-medium whitespace-nowrap text-stone-600 hover:bg-stone-100 hover:text-stone-900"
             >
               {label}
-              {href === "/messages" && unread > 0 && (
-                <span className="ml-1.5 rounded-full bg-brand-300 px-1.5 py-0.5 text-[10px] font-bold text-brand-950">
-                  {unread}
-                </span>
+              {viewer && href === "/messages" && (
+                <Suspense fallback={null}>
+                  <UnreadBadge viewerId={viewer.id} />
+                </Suspense>
+              )}
+              {viewer && href === "/pro/jobs" && (
+                <Suspense fallback={null}>
+                  <NewRequestsBadge viewerId={viewer.id} />
+                </Suspense>
               )}
             </Link>
           ))}
@@ -66,9 +87,12 @@ export async function Nav() {
         <div className="ml-auto flex items-center gap-2">
           {viewer ? (
             <>
-              <span className="hidden text-sm text-stone-600 sm:inline">
-                {viewer.fullName || viewer.email}
-              </span>
+              <Link
+                href="/settings"
+                className="rounded-md px-2 py-1.5 text-sm font-medium text-stone-600 hover:bg-stone-100 hover:text-stone-900"
+              >
+                Settings
+              </Link>
               <form action={signOut}>
                 <button className={buttonCls("secondary", true)}>Sign out</button>
               </form>

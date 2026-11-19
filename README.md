@@ -67,15 +67,17 @@ from the pro who was paid, so the platform keeps its full 5%. All of these numbe
 | Sign in | `/login` | Signed out | Email and password |
 | Dashboard | `/dashboard` | Signed in | Different view for customers and pros |
 | My projects | `/projects` | Customer | List of projects |
-| New project | `/projects/new` | Customer | Create a project |
+| New project | `/projects/new` | Customer | Create a project with photos; choose whether pros can find it |
 | Project | `/projects/[id]` | Customer | Quotes, milestones, payments, budget, disputes, reviews |
 | Edit profile | `/pro/profile` | Pro | Profile fields, trades, photos |
+| Find work | `/pro/find-work` | Pro | Search open projects and offer to quote them |
 | Leads & jobs | `/pro/jobs` | Pro | Quote requests and active jobs |
 | Lead / job | `/pro/jobs/[id]` | Pro | Send a quote, manage milestones, add and rate subs, answer disputes |
 | Subs | `/pro/subs` | Pro | Sub invitations and favorite subs |
 | Billing | `/pro/billing` | Pro | Membership, Stripe account setup, payments received |
 | Payment setup | `/pro/billing/setup` | Pro | Stripe's account setup form, shown inside the site |
-| Messages | `/messages`, `/messages/[id]` | Signed in | Conversations and live chat |
+| Messages | `/messages`, `/messages/[id]` | Signed in | Conversations and live chat, with photos |
+| Settings | `/settings` | Signed in | Name, location, email, password, and where payment methods are managed |
 | Disputes | `/admin/disputes` | Admin | Decide disputes |
 | Setup check | `/setup` | Anyone | Shows which connections are missing |
 | Terms, Privacy | `/terms`, `/privacy` | Anyone | Placeholders |
@@ -218,18 +220,18 @@ The schema is in `supabase/migrations/`. Files are numbered and applied in order
 | `pro_billing` | Private: the pro's Stripe account, customer and subscription ids, whether they can take payments |
 | `categories`, `pro_categories` | The 20 trades and which pros offer them |
 | `portfolio_photos`, `project_photos` | Photo records (files are in the `photos` storage bucket) |
-| `projects` | Customer projects |
-| `quote_requests` | A customer asking one pro to quote one project |
+| `projects` | Customer projects, and whether each is open to all pros (`open_to_pros`) |
+| `quote_requests` | One pro quoting one project. `source` says whether the customer invited the pro or the pro found the project under Find work |
 | `quotes` | A pro's quote; a revision replaces the earlier one |
 | `milestones` | The payment schedule of a quote, with status |
 | `budget_items` | Budget tracker lines; accepted quotes are added automatically |
 | `favorite_subs` | A pro's saved subs |
 | `project_subs` | Sub invitations on a quote: scope, amount, status |
-| `conversations`, `messages` | Messaging, one thread per pair of people |
+| `conversations`, `messages` | Messaging, one thread per pair of people. A message can carry up to 6 photos |
 | `payments` | One row per milestone payment, with the platform fee and refunds |
 | `sub_bills` | Bills from a sub to a lead contractor, and their payment |
 | `transfers` | No longer used (left from the earlier hold-and-release design) |
-| `disputes` | Reported problems, the pro's reply and offer, the outcome |
+| `disputes` | Reported problems, the pro's reply and offer, photos from both sides, the outcome |
 | `reviews` | Customer reviews of pros |
 | `sub_ratings` | Contractor ratings of subs (verified) |
 
@@ -395,10 +397,12 @@ src/lib/supabase/           Supabase clients: signed-in user, service-role, brow
 src/lib/stripe.ts           Stripe client
 src/lib/data.ts, format.ts  Shared lookups and formatting
 src/app/actions/            Server actions: every write goes through one of these
-  auth, profile, projects, quotes, subs, messages, payments, disputes, reviews
+  auth, account, profile, projects, quotes, subs, messages, payments, disputes, reviews
 src/app/                    Pages (see section 3) and the Stripe webhook
-src/components/             Shared UI, navigation, chat, photo uploader, milestone editor,
-                            dispute panel
+src/components/             Shared UI, navigation, chat, photo uploader and picker,
+                            milestone editor, dispute panel
+src/app/loading.tsx         Placeholder shown at once while a page's data loads
+vercel.json                 Runs the site's servers in Oregon, next to the database
 src/proxy.ts                Keeps the sign-in session fresh on every request
 docs/site-map.html          Page map with sample screens and a change log
 ```
@@ -518,6 +522,20 @@ Nothing in this list is built yet unless it says so.
 - [ ] **Punch list and final walkthrough** before the last bill.
 - [ ] **Estimate templates** for common jobs, to quote faster.
 - [ ] **Job status board**: leads, quoted, scheduled, in progress, waiting on payment, done.
+
+### Admin features
+
+- [ ] An **admin area** beyond disputes: search members, see a pro's membership, payments,
+      disputes, and reviews in one place.
+- [ ] **Removal of pros by admins**: take a pro out of search and stop new quotes, with a
+      reason on record and an email to the pro. Decide what happens to jobs in progress.
+- [ ] **Automatic pauses that leave the decision to an admin**: system checks (for example
+      several disputes in a short time, a run of low ratings, an expired license or
+      insurance document, a failed membership payment, or reports from customers) pause
+      the pro and put them in a staff review queue. An admin then restores or removes them.
+- [ ] A **log of admin actions**: who did what, to which account, and when.
+- [ ] **Review moderation**: hide or remove a review that breaks the content policy.
+- [ ] A **forgotten-password** link on the sign-in page.
 
 ### Launch area and growth
 

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { adminResolveDispute } from "@/app/actions/disputes";
+import { PhotoStrip } from "@/components/photo-picker";
 import { SubmitButton } from "@/components/submit-button";
 import { Badge, Card, Empty, Field, Flash, PageHeader, SectionTitle, inputCls, type SearchParams } from "@/components/ui";
 import { requireAdmin } from "@/lib/auth";
@@ -84,6 +85,7 @@ export default async function AdminDisputesPage({ searchParams }: { searchParams
                     <div>
                       <dt className="text-xs font-medium tracking-wide text-stone-500 uppercase">Customer says</dt>
                       <dd className="mt-1 whitespace-pre-wrap text-stone-800">{d.reason}</dd>
+                      <PhotoStrip paths={d.photo_paths ?? []} />
                     </div>
                     <div>
                       <dt className="text-xs font-medium tracking-wide text-stone-500 uppercase">Pro says</dt>
@@ -95,6 +97,7 @@ export default async function AdminDisputesPage({ searchParams }: { searchParams
                           </span>
                         )}
                       </dd>
+                      <PhotoStrip paths={d.pro_photo_paths ?? []} />
                     </div>
                   </dl>
                   <form action={adminResolveDispute} className="mt-4 grid gap-3 border-t border-stone-100 pt-4 sm:grid-cols-[12rem_1fr_auto] sm:items-end">
