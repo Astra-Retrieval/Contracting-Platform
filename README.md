@@ -537,6 +537,12 @@ Nothing in this list is built yet unless it says so.
 - [ ] **Review moderation**: hide or remove a review that breaks the content policy.
 - [ ] A **forgotten-password** link on the sign-in page.
 
+### Feedback
+
+- [ ] A place where customers and pros can **request features**: a short form on the site
+      (what they want and why), saved with who asked, and a staff page to read, sort, and
+      mark requests as planned, done, or declined.
+
 ### Launch area and growth
 
 - [ ] State on the site that Crew Orchard is **starting in South Carolina** and will soon
