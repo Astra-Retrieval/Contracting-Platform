@@ -17,7 +17,8 @@ export default function SetupPage() {
     ["Stripe publishable key", Boolean(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY), "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY"],
     ["Stripe webhook secret", Boolean(process.env.STRIPE_WEBHOOK_SECRET), "STRIPE_WEBHOOK_SECRET"],
     ["Email notifications (optional)", isEmailConfigured, "RESEND_API_KEY and EMAIL_FROM"],
-    ["Staff address for dispute alerts (optional)", Boolean(process.env.ADMIN_EMAIL), "ADMIN_EMAIL"],
+    ["Staff address for alerts (optional)", Boolean(process.env.ADMIN_EMAIL), "ADMIN_EMAIL"],
+    ["Daily document expiry job", Boolean(process.env.CRON_SECRET), "CRON_SECRET"],
   ];
   const ready = checks.slice(0, 2).every(([, ok]) => ok);
 
