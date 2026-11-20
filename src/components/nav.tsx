@@ -4,7 +4,7 @@ import { signOut } from "@/app/actions/auth";
 import { Logo } from "@/components/logo";
 import { ButtonLink, buttonCls } from "@/components/ui";
 import { getViewer } from "@/lib/auth";
-import { APP_NAME } from "@/lib/config";
+import { APP_NAME, LAUNCH_STATE_NAME } from "@/lib/config";
 import { createClient } from "@/lib/supabase/server";
 
 const customerLinks = [
@@ -21,6 +21,7 @@ const proLinks = [
   ["/pros", "Find pros"],
   ["/messages", "Messages"],
   ["/pro/profile", "Profile"],
+  ["/pro/credentials", "Licenses"],
   ["/pro/billing", "Billing"],
 ];
 
@@ -53,7 +54,7 @@ async function NewRequestsBadge({ viewerId }: { viewerId: string }) {
 export async function Nav() {
   const viewer = await getViewer();
   const links = viewer
-    ? [...(viewer.role === "pro" ? proLinks : customerLinks), ...(viewer.isAdmin ? [["/admin/disputes", "Disputes"]] : [])]
+    ? [...(viewer.role === "pro" ? proLinks : customerLinks), ...(viewer.isAdmin ? [["/admin", "Staff"]] : [])]
     : [["/pros", "Find pros"]];
 
   return (
@@ -118,14 +119,21 @@ export function Footer() {
     <footer className="mt-16 border-t border-stone-200 bg-white">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-6 text-sm text-stone-500">
         <span>
-          © {new Date().getFullYear()} {APP_NAME}, an Astra Retrieval company
+          © {new Date().getFullYear()} {APP_NAME}, an Astra Retrieval company. Now serving{" "}
+          {LAUNCH_STATE_NAME}.
         </span>
-        <span className="flex gap-4">
+        <span className="flex flex-wrap gap-x-4 gap-y-1">
           <Link href="/pros" className="hover:text-stone-800">
             Find pros
           </Link>
           <Link href="/signup?role=pro" className="hover:text-stone-800">
             Join as a pro
+          </Link>
+          <Link href="/waitlist" className="hover:text-stone-800">
+            Pro waitlist
+          </Link>
+          <Link href="/feedback" className="hover:text-stone-800">
+            Request a feature
           </Link>
           <Link href="/terms" className="hover:text-stone-800">
             Terms

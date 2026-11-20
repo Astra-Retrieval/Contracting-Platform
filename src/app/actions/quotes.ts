@@ -3,6 +3,15 @@
 import { revalidatePath } from "next/cache";
 import { requireCustomer, requirePro } from "@/lib/auth";
 import { displayName, notify, projectTitle } from "@/lib/email";
+import {
+  cleanEstimate,
+  cleanTemplate,
+  customerBreakdown,
+  isItemized,
+  parseJson,
+  totals,
+  type TemplateData,
+} from "@/lib/estimate";
 import { flash, money, text, toCents } from "@/lib/format";
 import { createAdminClient } from "@/lib/supabase/server";
 
@@ -37,6 +46,20 @@ export async function submitQuote(formData: FormData) {
   }
   const total = milestones.reduce((sum, m) => sum + m.amount_cents, 0);
 
+  // The estimate arrives from the browser, so it is cleaned and totalled again here.
+  const estimate = cleanEstimate(parseJson(formData.get("estimate")));
+  const itemized = formData.get("itemized") === "true" && isItemized(estimate);
+  if (!itemized) estimate.sections = [];
+  if (itemized && totals(estimate).total !== total) {
+    flash(
+      back,
+      "error",
+      `The milestones add up to ${money(total)} but the estimate comes to ${money(totals(estimate).total)}. Make the milestone shares add up to 100%.`,
+    );
+  }
+  const scope = text(formData.get("scope"));
+  const timeline = text(formData.get("timeline"));
+
   // A revised quote replaces the earlier one, along with any sub invites made on it.
   const { data: replaced } = await admin
     .from("quotes")
@@ -58,8 +81,9 @@ export async function submitQuote(formData: FormData) {
       project_id: request.project_id,
       pro_id: viewer.id,
       amount_cents: total,
-      timeline: text(formData.get("timeline")),
-      scope: text(formData.get("scope")),
+      timeline,
+      scope,
+      breakdown: customerBreakdown(estimate),
     })
     .select("id")
     .single();
@@ -69,6 +93,23 @@ export async function submitQuote(formData: FormData) {
     milestones.map((m) => ({ ...m, quote_id: quote.id, project_id: request.project_id })),
   );
   await admin.from("quote_requests").update({ status: "quoted" }).eq("id", requestId);
+
+  // The pro's private working copy, so a revised quote can start from this one.
+  const template: TemplateData = {
+    estimate,
+    scope,
+    timeline,
+    milestones: milestones.map((m) => ({
+      title: m.title,
+      amountCents: m.amount_cents,
+      pct: Math.round((m.amount_cents / total) * 10000) / 100,
+    })),
+  };
+  await admin.from("quote_estimates").insert({ quote_id: quote.id, pro_id: viewer.id, data: template });
+  const templateName = text(formData.get("template_name")).slice(0, 80);
+  if (templateName) {
+    await admin.from("estimate_templates").insert({ pro_id: viewer.id, name: templateName, data: template });
+  }
 
   const { data: project } = await admin
     .from("projects")
@@ -85,7 +126,11 @@ export async function submitQuote(formData: FormData) {
     cta: "Review the quote",
   });
 
-  flash(back, "notice", "Quote sent to the customer.");
+  flash(
+    back,
+    "notice",
+    templateName ? `Quote sent to the customer, and saved as the template "${templateName}".` : "Quote sent to the customer.",
+  );
 }
 
 export async function declineRequest(formData: FormData) {
@@ -204,4 +249,69 @@ export async function rejectQuote(formData: FormData) {
     cta: "See your leads",
   });
   revalidatePath(`/projects/${quote.project_id}`);
+}
+
+/** Create or update a saved estimate template from the template editor. */
+export async function saveTemplate(formData: FormData) {
+  const viewer = await requirePro();
+  const admin = createAdminClient();
+  const id = text(formData.get("template_id"));
+  const back = id ? `/pro/templates/${id}` : "/pro/templates/new";
+  const name = text(formData.get("name")).slice(0, 80);
+  if (!name) flash(back, "error", "Give the template a name.");
+
+  const estimate = cleanEstimate(parseJson(formData.get("estimate")));
+  if (formData.get("itemized") !== "true") estimate.sections = [];
+  const titles = formData.getAll("milestone_title").map((v) => text(v));
+  const amounts = formData.getAll("milestone_amount").map((v) => toCents(v));
+  const sum = amounts.reduce((a, b) => a + b, 0);
+  // An itemized template sends each milestone's share directly, which still works when no prices are filled in yet.
+  const shares = formData.getAll("milestone_pct").map((v) => parseFloat(String(v)) || 0);
+  const data = cleanTemplate({
+    estimate,
+    scope: text(formData.get("scope")),
+    timeline: text(formData.get("timeline")),
+    milestones: titles
+      .map((title, i) => ({
+        title,
+        amountCents: amounts[i] ?? 0,
+        pct:
+          shares.length === titles.length
+            ? shares[i]
+            : sum
+              ? Math.round(((amounts[i] ?? 0) / sum) * 10000) / 100
+              : Math.round(10000 / titles.length) / 100,
+      }))
+      .filter((m) => m.title),
+  });
+
+  if (id) {
+    const { error } = await admin
+      .from("estimate_templates")
+      .update({ name, data, updated_at: new Date().toISOString() })
+      .eq("id", id)
+      .eq("pro_id", viewer.id);
+    if (error) flash(back, "error", error.message);
+  } else {
+    const { count } = await admin
+      .from("estimate_templates")
+      .select("id", { count: "exact", head: true })
+      .eq("pro_id", viewer.id);
+    if ((count ?? 0) >= 100) flash("/pro/templates", "error", "You have 100 templates. Delete one before adding another.");
+    const { error } = await admin.from("estimate_templates").insert({ pro_id: viewer.id, name, data });
+    if (error) flash(back, "error", error.message);
+  }
+  revalidatePath("/pro/templates");
+  flash("/pro/templates", "notice", `Template "${name}" saved.`);
+}
+
+export async function deleteTemplate(formData: FormData) {
+  const viewer = await requirePro();
+  await createAdminClient()
+    .from("estimate_templates")
+    .delete()
+    .eq("id", text(formData.get("template_id")))
+    .eq("pro_id", viewer.id);
+  revalidatePath("/pro/templates");
+  flash("/pro/templates", "notice", "Template deleted.");
 }

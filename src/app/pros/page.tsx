@@ -1,7 +1,9 @@
 import Link from "next/link";
+import { DocsBadge } from "@/components/credentials";
 import { redirect } from "next/navigation";
 import { Badge, Card, Empty, PageHeader, Stars, buttonCls, inputCls, type SearchParams } from "@/components/ui";
 import { isSupabaseConfigured } from "@/lib/config";
+import type { DocsStatus } from "@/lib/credentials";
 import { getCategories } from "@/lib/data";
 import { photoUrl, rateRange } from "@/lib/format";
 import { isStripeConfigured } from "@/lib/stripe";
@@ -20,8 +22,7 @@ type Pro = {
   job_min: number | null;
   job_max: number | null;
   typical_timeline: string;
-  insured: boolean;
-  license_number: string;
+  docs_status: DocsStatus;
   rating_avg: number;
   rating_count: number;
 };
@@ -47,7 +48,7 @@ export default async function ProsPage({ searchParams }: { searchParams: SearchP
   let query = supabase
     .from("pro_profiles")
     .select(
-      "user_id, business_name, headline, city, state, hourly_rate_min, hourly_rate_max, job_min, job_max, typical_timeline, insured, license_number, rating_avg, rating_count",
+      "user_id, business_name, headline, city, state, hourly_rate_min, hourly_rate_max, job_min, job_max, typical_timeline, docs_status, rating_avg, rating_count",
     )
     .neq("business_name", "")
     .order("rating_avg", { ascending: false })
@@ -235,8 +236,7 @@ export default async function ProsPage({ searchParams }: { searchParams: SearchP
                         {(tradesByPro.get(pro.user_id) ?? []).slice(0, 3).map((t) => (
                           <Badge key={t}>{t}</Badge>
                         ))}
-                        {pro.insured && <Badge tone="green">Insured</Badge>}
-                        {pro.license_number && <Badge tone="blue">Licensed</Badge>}
+                        <DocsBadge status={pro.docs_status} />
                       </div>
                     </div>
                   </Card>

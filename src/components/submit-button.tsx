@@ -14,6 +14,8 @@ export function SubmitButton({
   className,
   pendingText,
   confirm,
+  name,
+  value,
 }: {
   children: ReactNode;
   variant?: Variant;
@@ -22,11 +24,16 @@ export function SubmitButton({
   pendingText?: string;
   /** If set, ask the user to confirm before submitting. */
   confirm?: string;
+  /** Sent with the form, to tell several submit buttons apart. */
+  name?: string;
+  value?: string;
 }) {
   const { pending } = useFormStatus();
   return (
     <button
       type="submit"
+      name={name}
+      value={value}
       disabled={pending}
       className={cn(buttonCls(variant, small), className)}
       onClick={(e) => {

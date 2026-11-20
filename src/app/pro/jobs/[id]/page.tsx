@@ -6,7 +6,8 @@ import { declineRequest, submitQuote } from "@/app/actions/quotes";
 import { submitSubRating } from "@/app/actions/reviews";
 import { inviteSub, removeSub } from "@/app/actions/subs";
 import { DisputePanel, type Dispute } from "@/components/dispute-panel";
-import { MilestoneEditor } from "@/components/milestone-editor";
+import { QuoteBreakdown } from "@/components/quote-breakdown";
+import { QuoteBuilder, type SavedTemplate } from "@/components/quote-builder";
 import { SubmitButton } from "@/components/submit-button";
 import {
   Badge,
@@ -28,6 +29,7 @@ import {
   processingFeeLabel,
 } from "@/lib/config";
 import { namesById, prosById } from "@/lib/data";
+import { cleanTemplate, type Breakdown } from "@/lib/estimate";
 import { flash, money, photoUrl, shortDate } from "@/lib/format";
 import { confirmCheckoutReturn } from "@/lib/payments";
 import { isStripeConfigured } from "@/lib/stripe";
@@ -120,6 +122,20 @@ export default async function ProJobPage({
       : Promise.resolve({ data: [] }),
     supabase.from("pro_billing").select("payouts_enabled").eq("user_id", viewer.id).maybeSingle(),
   ]);
+  const { data: myPro } = await supabase.from("pro_profiles").select("docs_status").eq("user_id", viewer.id).maybeSingle();
+  const myDocsStatus = myPro?.docs_status ?? "missing";
+  // For the quote form: saved templates, and the working estimate behind the current quote.
+  const [{ data: templateRows }, { data: lastEstimate }] = await Promise.all([
+    supabase.from("estimate_templates").select("id, name, data").eq("pro_id", viewer.id).order("name"),
+    quote
+      ? supabase.from("quote_estimates").select("data").eq("quote_id", quote.id).maybeSingle()
+      : Promise.resolve({ data: null }),
+  ]);
+  const templates: SavedTemplate[] = (templateRows ?? []).map((row) => ({
+    id: row.id,
+    name: row.name,
+    data: cleanTemplate(row.data),
+  }));
   const canBill = Boolean(myBilling?.payouts_enabled);
   const disputeFor = new Map<string, Dispute>();
   for (const d of (disputeRows ?? []) as Dispute[]) disputeFor.set(d.milestone_id, d);
@@ -238,6 +254,14 @@ export default async function ProJobPage({
               </div>
               {quote.timeline && <p className="mt-1 text-sm text-stone-600">Timeline: {quote.timeline}</p>}
               {quote.scope && <p className="mt-2 text-sm whitespace-pre-wrap text-stone-700">{quote.scope}</p>}
+              {quote.breakdown && (
+                <details className="mt-2 text-sm">
+                  <summary className="cursor-pointer text-stone-500 hover:text-stone-800">
+                    What the customer sees of your estimate
+                  </summary>
+                  <QuoteBreakdown breakdown={quote.breakdown as Breakdown} />
+                </details>
+              )}
 
               <ul className="mt-4 divide-y divide-stone-100 border-t border-stone-100">
                 {milestones.map((m, i) => (
@@ -309,47 +333,6 @@ export default async function ProJobPage({
             </Card>
           )}
 
-          {/* --------------------------------------------------- Quote form */}
-          {canQuote && (
-            <Card>
-              <SectionTitle>{quote ? "Send a revised quote" : "Send a quote"}</SectionTitle>
-              {quote && (
-                <p className="mb-3 text-sm text-stone-500">
-                  A new quote replaces the one above. Subs you invited will need to be invited again.
-                </p>
-              )}
-              <form action={submitQuote} className="space-y-4">
-                <input type="hidden" name="request_id" value={id} />
-                <Field label="Scope of work" hint="What is included, what is not, and any assumptions.">
-                  <textarea name="scope" rows={5} required className={inputCls} />
-                </Field>
-                <Field label="Timeline" hint="e.g. Can start in 2 weeks; about 5 working days on site.">
-                  <input name="timeline" maxLength={200} className={inputCls} />
-                </Field>
-                <div>
-                  <p className="mb-1 text-sm font-medium text-stone-800">Payment milestones</p>
-                  <p className="mb-2 text-xs text-stone-500">
-                    Milestones are the payment schedule the customer sees. You send the bill for
-                    each one when it comes due, and they approve the work and pay.
-                  </p>
-                  <MilestoneEditor
-                    feeBps={PLATFORM_FEE_BPS}
-                    processingBps={PROCESSING_FEE_BPS}
-                    processingFixedCents={PROCESSING_FEE_FIXED_CENTS}
-                  />
-                </div>
-                <div className="flex flex-wrap justify-end gap-2">
-                  <SubmitButton pendingText="Sending…">{quote ? "Send revised quote" : "Send quote"}</SubmitButton>
-                </div>
-              </form>
-              <form action={declineRequest} className="mt-3 border-t border-stone-100 pt-3 text-right">
-                <input type="hidden" name="request_id" value={id} />
-                <SubmitButton variant="ghost" small confirm="Decline this request?">
-                  Not a fit? Decline this request
-                </SubmitButton>
-              </form>
-            </Card>
-          )}
         </div>
 
         {/* ------------------------------------------------------- Subs */}
@@ -547,6 +530,49 @@ export default async function ProJobPage({
           </Card>
         </aside>
       </div>
+
+      {/* --------------------------------------------------- Quote form */}
+      {canQuote && (
+        <Card className="mt-8">
+          <SectionTitle>{quote ? "Send a revised quote" : "Send a quote"}</SectionTitle>
+          {quote && (
+            <p className="mb-3 text-sm text-stone-500">
+              A new quote replaces the one above. Subs you invited will need to be invited again.
+            </p>
+          )}
+          {myDocsStatus === "missing" && (
+            <p className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-900">
+              The customer will see a red &ldquo;No proof of license provided&rdquo; warning on this quote.{" "}
+              <Link href="/pro/credentials" className="font-semibold underline">
+                Add your licenses and insurance
+              </Link>{" "}
+              to remove it.
+            </p>
+          )}
+          <form action={submitQuote} className="space-y-6">
+            <input type="hidden" name="request_id" value={id} />
+            <QuoteBuilder
+              feeBps={PLATFORM_FEE_BPS}
+              processingBps={PROCESSING_FEE_BPS}
+              processingFixedCents={PROCESSING_FEE_FIXED_CENTS}
+              templates={templates}
+              initial={lastEstimate ? cleanTemplate(lastEstimate.data) : undefined}
+            />
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <Link href="/pro/templates" className="text-sm text-stone-600 hover:text-stone-900 hover:underline">
+                Manage templates
+              </Link>
+              <SubmitButton pendingText="Sending…">{quote ? "Send revised quote" : "Send quote"}</SubmitButton>
+            </div>
+          </form>
+          <form action={declineRequest} className="mt-3 border-t border-stone-100 pt-3 text-right">
+            <input type="hidden" name="request_id" value={id} />
+            <SubmitButton variant="ghost" small confirm="Decline this request?">
+              Not a fit? Decline this request
+            </SubmitButton>
+          </form>
+        </Card>
+      )}
     </div>
   );
 }

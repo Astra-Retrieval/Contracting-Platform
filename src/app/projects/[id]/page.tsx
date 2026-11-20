@@ -13,7 +13,9 @@ import {
 import { acceptQuote, rejectQuote } from "@/app/actions/quotes";
 import { submitReview } from "@/app/actions/reviews";
 import { DisputePanel, type Dispute } from "@/components/dispute-panel";
+import { CredentialList, DocsBadge, DocsWarning } from "@/components/credentials";
 import { PhotoField } from "@/components/photo-picker";
+import { QuoteBreakdown } from "@/components/quote-breakdown";
 import { PhotoUploader } from "@/components/photo-uploader";
 import { SubmitButton } from "@/components/submit-button";
 import {
@@ -31,6 +33,8 @@ import {
 } from "@/components/ui";
 import { requireCustomer } from "@/lib/auth";
 import { prosById } from "@/lib/data";
+import { CREDENTIAL_COLUMNS, type Credential, type DocsStatus } from "@/lib/credentials";
+import type { Breakdown } from "@/lib/estimate";
 import { flash, money, photoUrl, shortDate } from "@/lib/format";
 import { confirmCheckoutReturn } from "@/lib/payments";
 import { isStripeConfigured } from "@/lib/stripe";
@@ -43,6 +47,7 @@ type Quote = {
   amount_cents: number;
   timeline: string;
   scope: string;
+  breakdown: Breakdown | null;
   status: string;
   created_at: string;
 };
@@ -133,6 +138,17 @@ export default async function ProjectPage({
     ...(subs ?? []).map((s) => s.sub_id),
   ]);
   const proName = (pid: string) => pros.get(pid)?.business_name || "Pro";
+  // Each quoting pro's documents, so the customer can check them before accepting.
+  const quotingProIds = [...new Set((requests ?? []).map((r) => r.pro_id))];
+  const [{ data: credentialRows }, { data: docRows }] = quotingProIds.length
+    ? await Promise.all([
+        supabase.from("pro_credentials").select(CREDENTIAL_COLUMNS).in("pro_id", quotingProIds).order("created_at"),
+        supabase.from("pro_profiles").select("user_id, docs_status").in("user_id", quotingProIds),
+      ])
+    : [{ data: [] }, { data: [] }];
+  const credentialsFor = (pid: string) => ((credentialRows ?? []) as Credential[]).filter((c) => c.pro_id === pid);
+  const docsStatusFor = (pid: string) =>
+    ((docRows ?? []).find((d) => d.user_id === pid)?.docs_status ?? "missing") as DocsStatus;
   const milestonesFor = (quoteId: string) => milestones.filter((m) => m.quote_id === quoteId);
 
   const accepted = quotes.filter((q) => q.status === "accepted");
@@ -448,6 +464,9 @@ export default async function ProjectPage({
                           <div className="mt-0.5">
                             <Stars value={pro?.rating_avg ?? 0} count={pro?.rating_count ?? 0} />
                           </div>
+                          <div className="mt-1">
+                            <DocsBadge status={docsStatusFor(r.pro_id)} />
+                          </div>
                         </div>
                         <div className="flex items-center gap-2">
                           <StatusBadge status={quote ? quote.status : r.status} />
@@ -479,6 +498,7 @@ export default async function ProjectPage({
                           {quote.scope && (
                             <p className="mt-2 text-sm whitespace-pre-wrap text-stone-700">{quote.scope}</p>
                           )}
+                          <QuoteBreakdown breakdown={quote.breakdown} />
                           {quote.status !== "accepted" && (
                             <ul className="mt-3 space-y-1 text-sm text-stone-600">
                               {milestonesFor(quote.id).map((m, i) => (
@@ -492,12 +512,37 @@ export default async function ProjectPage({
                             </ul>
                           )}
                           {quote.status === "submitted" && !closed && (
+                            <div className="mt-4 space-y-3">
+                              <DocsWarning status={docsStatusFor(r.pro_id)} name={proName(r.pro_id)} compact />
+                              <details className="rounded-lg border border-stone-200 bg-stone-50 p-3 text-sm" open>
+                                <summary className="cursor-pointer font-semibold text-stone-900">
+                                  Before you accept: check this pro&apos;s license and insurance
+                                </summary>
+                                <p className="mt-2 text-stone-700">
+                                  Look each one up with the issuer and make sure the name matches, it is
+                                  active, and it has not expired. It takes a few minutes and it is your
+                                  best protection.
+                                </p>
+                                <div className="mt-3">
+                                  <CredentialList
+                                    credentials={credentialsFor(r.pro_id)}
+                                    empty="This pro has not provided any licenses, insurance, or other documents."
+                                  />
+                                </div>
+                              </details>
+                            </div>
+                          )}
+                          {quote.status === "submitted" && !closed && (
                             <div className="mt-4 flex flex-wrap gap-2">
                               <form action={acceptQuote}>
                                 <input type="hidden" name="quote_id" value={quote.id} />
                                 <SubmitButton
                                   pendingText="Accepting…"
-                                  confirm={`Accept this quote from ${proName(r.pro_id)} for ${money(quote.amount_cents)}?`}
+                                  confirm={`Accept this quote from ${proName(r.pro_id)} for ${money(quote.amount_cents)}?\n\nHave you checked their license and insurance? ${
+                                    docsStatusFor(r.pro_id) === "missing"
+                                      ? "This pro has NOT provided proof of a required license."
+                                      : "Their documents are listed above the Accept button."
+                                  }`}
                                 >
                                   Accept quote
                                 </SubmitButton>

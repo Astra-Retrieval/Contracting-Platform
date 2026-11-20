@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Card, Empty, Flash, PageHeader, SectionTitle, StatusBadge, type SearchParams } from "@/components/ui";
+import { ButtonLink, Card, Empty, Flash, PageHeader, SectionTitle, StatusBadge, type SearchParams } from "@/components/ui";
 import { requirePro } from "@/lib/auth";
 import { namesById } from "@/lib/data";
 import { money, shortDate } from "@/lib/format";
@@ -42,7 +42,15 @@ export default async function ProJobsPage({ searchParams }: { searchParams: Sear
   return (
     <div className="page">
       <Flash params={params} />
-      <PageHeader title="Leads & jobs" subtitle="Quote requests from customers and the jobs you have won." />
+      <PageHeader
+        title="Leads & jobs"
+        subtitle="Quote requests from customers and the jobs you have won."
+        action={
+          <ButtonLink href="/pro/templates" variant="secondary" small>
+            Estimate templates
+          </ButtonLink>
+        }
+      />
       {(requests ?? []).length === 0 ? (
         <Empty title="No quote requests yet">
           Customers find you through search. A complete profile with photos gets more requests.

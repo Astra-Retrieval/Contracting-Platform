@@ -34,6 +34,11 @@ export default async function LoginPage({ searchParams }: { searchParams: Search
           <SubmitButton className="w-full" pendingText="Signing in…">
             Sign in
           </SubmitButton>
+          <p className="text-center text-sm">
+            <Link href="/forgot-password" className="text-stone-600 hover:text-stone-900 hover:underline">
+              Forgot your password?
+            </Link>
+          </p>
         </form>
       </Card>
       <p className="mt-4 text-center text-sm text-stone-600">

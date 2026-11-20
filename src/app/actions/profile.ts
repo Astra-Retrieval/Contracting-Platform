@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requirePro } from "@/lib/auth";
+import { refreshDocsStatus } from "@/lib/credentials-server";
 import { flash, text, toInt } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
 
@@ -29,8 +30,6 @@ export async function updateProProfile(formData: FormData) {
       job_max: toInt(formData.get("job_max")),
       pricing_notes: text(formData.get("pricing_notes")),
       typical_timeline: text(formData.get("typical_timeline")),
-      license_number: text(formData.get("license_number")),
-      insured: formData.get("insured") === "on",
     })
     .eq("user_id", viewer.id);
   if (error) flash("/pro/profile", "error", error.message);
@@ -47,6 +46,8 @@ export async function updateProProfile(formData: FormData) {
       .insert(categoryIds.map((category_id) => ({ pro_id: viewer.id, category_id })));
   }
 
+  // The trades decide which documents are required.
+  await refreshDocsStatus(viewer.id);
   revalidatePath("/pros");
   flash("/pro/profile", "notice", "Profile saved.");
 }

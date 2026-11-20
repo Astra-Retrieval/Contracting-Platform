@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ButtonLink, buttonCls, inputCls } from "@/components/ui";
 import { getViewer } from "@/lib/auth";
-import { APP_NAME, PRO_MONTHLY_PRICE_CENTS, TRIAL_DAYS, feePercentLabel } from "@/lib/config";
+import { APP_NAME, LAUNCH_STATE_NAME, PRO_MONTHLY_PRICE_CENTS, TRIAL_DAYS, feePercentLabel } from "@/lib/config";
 
 const categories = [
   ["general-contractor", "General contracting"],
@@ -38,6 +38,12 @@ export default async function Home() {
 
   return (
     <>
+      <div className="bg-brand-800 px-4 py-2.5 text-center text-sm text-white">
+        Now open in {LAUNCH_STATE_NAME}. More states are coming soon.{" "}
+        <Link href="/waitlist" className="font-semibold underline underline-offset-2">
+          Pro in another state? Join the waitlist
+        </Link>
+      </div>
       <section className="border-b border-stone-200 bg-white">
         <div className="mx-auto grid max-w-6xl gap-10 px-4 py-16 md:grid-cols-[1.2fr_1fr] md:py-24">
           <div>

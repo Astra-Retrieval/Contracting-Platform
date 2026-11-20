@@ -4,7 +4,16 @@ import { signUp } from "@/app/actions/auth";
 import { SubmitButton } from "@/components/submit-button";
 import { Card, Field, Flash, cn, inputCls, type SearchParams } from "@/components/ui";
 import { getViewer } from "@/lib/auth";
-import { PRO_MONTHLY_PRICE_CENTS, TRIAL_DAYS, feePercentLabel, isSupabaseConfigured } from "@/lib/config";
+import { CREDENTIAL_TYPES, tradeNeedsDocs } from "@/lib/credentials";
+import { getCategories } from "@/lib/data";
+import { createClient } from "@/lib/supabase/server";
+import {
+  LAUNCH_STATE_NAME,
+  PRO_MONTHLY_PRICE_CENTS,
+  TRIAL_DAYS,
+  feePercentLabel,
+  isSupabaseConfigured,
+} from "@/lib/config";
 
 export const metadata = { title: "Create an account" };
 
@@ -12,6 +21,7 @@ export default async function SignupPage({ searchParams }: { searchParams: Searc
   if (!isSupabaseConfigured) redirect("/setup");
   if (await getViewer()) redirect("/dashboard");
   const params = await searchParams;
+  const categories = await getCategories(await createClient());
   const role = params.role === "pro" ? "pro" : "customer";
 
   const tab = (value: string, label: string, hint: string) => (
@@ -49,6 +59,48 @@ export default async function SignupPage({ searchParams }: { searchParams: Searc
               <input name="business_name" autoComplete="organization" className={inputCls} />
             </Field>
           )}
+          {role === "pro" && (
+            <>
+              <fieldset>
+                <legend className="mb-1 text-sm font-medium text-stone-800">What work do you do?</legend>
+                <p className="mb-2 text-xs text-stone-500">
+                  Tick every trade you take on. <span className="text-red-700">⚑</span> means South
+                  Carolina requires a license or registration for it.
+                </p>
+                <div className="grid grid-cols-2 gap-x-3 gap-y-2">
+                  {categories.map((c) => (
+                    <label key={c.id} className="flex items-center gap-2 text-sm text-stone-700">
+                      <input type="checkbox" name="trade" value={c.id} className="size-4 accent-brand-600" />
+                      {c.name}
+                      {tradeNeedsDocs(c.slug) && (
+                        <span title="South Carolina requires a license or registration for this trade" className="text-red-700">
+                          ⚑
+                        </span>
+                      )}
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+              <fieldset>
+                <legend className="mb-1 text-sm font-medium text-stone-800">
+                  Which licenses and insurance do you have?
+                </legend>
+                <p className="mb-2 text-xs text-stone-500">
+                  Tick what you hold now. After you sign up you upload each one, and customers can
+                  check them. You can join without them, but your profile and quotes will carry a
+                  warning until you add proof.
+                </p>
+                <div className="space-y-2">
+                  {CREDENTIAL_TYPES.map((t) => (
+                    <label key={t.id} className="flex items-center gap-2 text-sm text-stone-700">
+                      <input type="checkbox" name="doc" value={t.id} className="size-4 accent-brand-600" />
+                      {t.label}
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+            </>
+          )}
           <Field label="Email">
             <input name="email" type="email" required autoComplete="email" className={inputCls} />
           </Field>
@@ -65,6 +117,16 @@ export default async function SignupPage({ searchParams }: { searchParams: Searc
           <SubmitButton className="w-full" pendingText="Creating account…">
             Create account
           </SubmitButton>
+          {role === "pro" && (
+            <p className="rounded-lg bg-brand-50 p-3 text-xs text-stone-700">
+              We are open in {LAUNCH_STATE_NAME} first, with more states coming soon. Work somewhere
+              else?{" "}
+              <Link href="/waitlist" className="font-semibold text-brand-700 underline">
+                Join the waitlist
+              </Link>{" "}
+              and we will email you when we open in your state.
+            </p>
+          )}
           {role === "pro" && (
             <p className="text-xs text-stone-500">
               Pro membership is ${PRO_MONTHLY_PRICE_CENTS / 100}/month after a {TRIAL_DAYS}-day free

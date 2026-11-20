@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { startConversation } from "@/app/actions/messages";
 import { requestQuote } from "@/app/actions/projects";
+import { CredentialList, DocsBadge, DocsWarning } from "@/components/credentials";
 import { toggleFavorite } from "@/app/actions/subs";
 import { SubmitButton } from "@/components/submit-button";
 import {
@@ -16,6 +17,7 @@ import {
 } from "@/components/ui";
 import { getViewer } from "@/lib/auth";
 import { isSupabaseConfigured } from "@/lib/config";
+import { CREDENTIAL_COLUMNS, evaluate, type Credential } from "@/lib/credentials";
 import { namesById } from "@/lib/data";
 import { photoUrl, rateRange, shortDate } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
@@ -38,8 +40,9 @@ export default async function ProPage({
   const { data: pro } = await supabase.from("pro_profiles").select("*").eq("user_id", id).maybeSingle();
   if (!pro) notFound();
 
-  const [{ data: links }, { data: photos }, { data: reviews }, { data: subRatings }] = await Promise.all([
+  const [{ data: links }, { data: credentialRows }, { data: photos }, { data: reviews }, { data: subRatings }] = await Promise.all([
     supabase.from("pro_categories").select("category_id").eq("pro_id", id),
+    supabase.from("pro_credentials").select(CREDENTIAL_COLUMNS).eq("pro_id", id).order("created_at"),
     supabase.from("portfolio_photos").select("id, storage_path, caption").eq("pro_id", id).order("created_at"),
     supabase
       .from("reviews")
@@ -56,8 +59,10 @@ export default async function ProPage({
   ]);
   const { data: cats } = await supabase
     .from("categories")
-    .select("id, name")
+    .select("id, name, slug")
     .in("id", (links ?? []).map((l) => l.category_id));
+  const credentials = (credentialRows ?? []) as Credential[];
+  const docs = evaluate(cats ?? [], credentials);
   const names = await namesById(supabase, [
     ...(reviews ?? []).map((r) => r.reviewer_id),
     ...(subRatings ?? []).map((r) => r.lead_pro_id),
@@ -96,7 +101,6 @@ export default async function ProPage({
     ["Typical timeline", pro.typical_timeline],
     ["Service area", pro.service_radius_miles ? `Within ${pro.service_radius_miles} miles` : ""],
     ["Experience", pro.years_experience ? `${pro.years_experience} years` : ""],
-    ["License", pro.license_number],
   ].filter(([, v]) => v) as [string, string][];
 
   return (
@@ -120,10 +124,26 @@ export default async function ProPage({
               {(cats ?? []).map((c) => (
                 <Badge key={c.id}>{c.name}</Badge>
               ))}
-              {pro.insured && <Badge tone="green">Insured</Badge>}
-              {pro.license_number && <Badge tone="blue">Licensed</Badge>}
+              <DocsBadge status={docs.status} />
             </div>
           </header>
+
+          <DocsWarning status={docs.status} requirements={docs.requirements} name={pro.business_name || "This pro"} />
+
+          <section id="documents" className="scroll-mt-24">
+            <SectionTitle>Licenses and insurance</SectionTitle>
+            <Card>
+              <CredentialList
+                credentials={credentials}
+                empty="This pro has not provided any licenses, insurance, or other documents."
+              />
+              <p className="mt-4 border-t border-stone-100 pt-3 text-xs text-stone-500">
+                &ldquo;Checked by Crew Orchard&rdquo; means our staff compared the document with the issuer&apos;s
+                records on the date it was checked. It is not a guarantee. Always confirm a license and
+                insurance yourself before work starts.
+              </p>
+            </Card>
+          </section>
 
           {(photos ?? []).length > 0 && (
             <section>

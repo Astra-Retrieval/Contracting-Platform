@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { adminResolveDispute } from "@/app/actions/disputes";
+import { AdminTabs } from "@/components/admin-tabs";
 import { PhotoStrip } from "@/components/photo-picker";
 import { SubmitButton } from "@/components/submit-button";
 import { Badge, Card, Empty, Field, Flash, PageHeader, SectionTitle, inputCls, type SearchParams } from "@/components/ui";
@@ -47,6 +48,7 @@ export default async function AdminDisputesPage({ searchParams }: { searchParams
         title="Disputes"
         subtitle="Platform staff only. Decide how a disputed payment is split between the customer and the pro."
       />
+      <AdminTabs current="/admin/disputes" />
 
       <SectionTitle>
         Open <span className="font-normal text-stone-400">({open.length})</span>

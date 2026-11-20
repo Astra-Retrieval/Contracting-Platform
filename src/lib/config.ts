@@ -40,3 +40,11 @@ export const estimatedProcessingFee = (amountCents: number, payments = 1) =>
     : 0;
 export const processingFeeLabel = `${PROCESSING_FEE_BPS / 100}% + ${PROCESSING_FEE_FIXED_CENTS}¢`;
 export const feePercentLabel = `${PLATFORM_FEE_BPS / 100}%`;
+
+/** Where the platform is open first. Pros elsewhere are pointed to the waitlist. */
+export const LAUNCH_STATES: Record<string, string> = { SC: "South Carolina" };
+export const isLaunchState = (code: string) => code.toUpperCase() in LAUNCH_STATES;
+/** "South Carolina", or "A and B" once there are more, for sentences. */
+export const LAUNCH_STATE_NAME = Object.values(LAUNCH_STATES)
+  .join(", ")
+  .replace(/, ([^,]*)$/, Object.keys(LAUNCH_STATES).length > 2 ? ", and $1" : " and $1");

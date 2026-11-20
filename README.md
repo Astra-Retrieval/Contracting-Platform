@@ -6,6 +6,20 @@ single bookshelf install to a whole-house renovation.
 
 The name is set in one place: `NEXT_PUBLIC_APP_NAME`.
 
+**The goal.** Be the best place for customers to find a contractor, and for contractors and
+subs to find work.
+
+**Long-term vision.** Once the first city is online and bringing in revenue, Crew Orchard
+grows from a marketplace into the tool a contractor runs their business on:
+
+- **Project management for contractors**: calendar, tasks, change orders, daily logs,
+  documents, sub scheduling, and job costing, all tied to the jobs won on the platform.
+- **Parts and materials ordering built in**: build a materials list from a quote, order
+  from suppliers inside the job, and track cost and delivery against the budget.
+
+Neither is being built yet. The order is: first city live, then revenue, then these. The
+detailed lists are in [To do](#16-to-do) under "Later".
+
 **Contents**
 
 1. [What it does](#1-what-it-does)
@@ -65,23 +79,34 @@ from the pro who was paid, so the platform keeps its full 5%. All of these numbe
 | Pro profile | `/pros/[id]` | Anyone | Public profile; request a quote, message, add to favorites |
 | Create account | `/signup` | Signed out | Sign up as customer or pro |
 | Sign in | `/login` | Signed out | Email and password |
+| Reset password | `/forgot-password`, `/reset-password` | Anyone | Email a reset link, then choose a new password |
+| Pro waitlist | `/waitlist` | Anyone | Pros outside South Carolina ask to be told when their state opens |
 | Dashboard | `/dashboard` | Signed in | Different view for customers and pros |
 | My projects | `/projects` | Customer | List of projects |
 | New project | `/projects/new` | Customer | Create a project with photos; choose whether pros can find it |
 | Project | `/projects/[id]` | Customer | Quotes, milestones, payments, budget, disputes, reviews |
 | Edit profile | `/pro/profile` | Pro | Profile fields, trades, photos |
+| Licenses and insurance | `/pro/credentials` | Pro | Upload documents; see what the state requires for your trades |
 | Find work | `/pro/find-work` | Pro | Search open projects and offer to quote them |
 | Leads & jobs | `/pro/jobs` | Pro | Quote requests and active jobs |
-| Lead / job | `/pro/jobs/[id]` | Pro | Send a quote, manage milestones, add and rate subs, answer disputes |
+| Lead / job | `/pro/jobs/[id]` | Pro | Build and send a quote, manage milestones, add and rate subs, answer disputes |
+| Estimate templates | `/pro/templates`, `/pro/templates/[id]` | Pro | Saved estimates to start quotes from |
 | Subs | `/pro/subs` | Pro | Sub invitations and favorite subs |
 | Billing | `/pro/billing` | Pro | Membership, Stripe account setup, payments received |
 | Payment setup | `/pro/billing/setup` | Pro | Stripe's account setup form, shown inside the site |
 | Messages | `/messages`, `/messages/[id]` | Signed in | Conversations and live chat, with photos |
 | Settings | `/settings` | Signed in | Name, location, email, password, and where payment methods are managed |
+| Request a feature | `/feedback` | Signed in | Send an idea and see its status |
+| Staff overview | `/admin` | Admin | Counts and links to the staff pages |
 | Disputes | `/admin/disputes` | Admin | Decide disputes |
+| Documents | `/admin/credentials` | Admin | Check uploaded licenses and insurance; approve or reject |
+| Review moderation | `/admin/reviews` | Admin | Hide or restore a review |
+| Feature requests | `/admin/feedback` | Admin | Set a status and reply to the member |
+| Waitlist | `/admin/waitlist` | Admin | Pros waiting for their state |
 | Setup check | `/setup` | Anyone | Shows which connections are missing |
 | Terms, Privacy | `/terms`, `/privacy` | Anyone | Placeholders |
 | Stripe webhook | `/api/stripe/webhook` | Stripe | Background updates from Stripe |
+| Daily document check | `/api/cron/credentials` | Vercel schedule | Expiry reminders and marking documents expired |
 | Email confirmation | `/auth/callback` | New members | Landing point for the confirmation link |
 
 A visual version with sample screens is in `docs/site-map.html`.
@@ -114,6 +139,96 @@ A milestone moves through these states:
 | Approved and paid | Money went to the pro | Final, unless a problem is reported |
 | Paid, problem reported | Customer reported a problem after paying | See [Disputes](#6-disputes) |
 | Refunded | Whole payment went back to the customer | Final |
+
+### Building a quote
+
+A pro prices a quote in one of two ways, and can switch between them:
+
+- **Simple price**: type the payment milestones; the total is their sum.
+- **Itemized estimate**: sections (for example Demolition, Framing, Finishes), each with
+  line items. A line has a description, a type (labor, materials, equipment, subcontractor,
+  other), a quantity and unit, the pro's cost per unit, and a markup. On top of the lines
+  the pro can add a contingency percentage, sales tax on materials, and a discount. The
+  builder shows cost, markup, total, and profit as the pro types.
+
+**What the customer sees is the pro's choice**: the total only, section totals, line items
+with section prices, or line items with prices. A section can be hidden, in which case it
+is folded into "Other work". The pro can also list what is and is not included and how
+long the price is good for. The total and the payment milestones are always sent. The pro's
+costs and markup are never sent: they are kept in a private table, and the customer's copy
+is built on the server.
+
+In an itemized quote each milestone is a share of the total, so the milestones always add
+up. Any quote can be saved as a **template** when it is sent, and templates can be created
+and edited at `/pro/templates`. Sending a revised quote starts from the previous one.
+
+### Licenses and insurance
+
+Pros can join and quote without any documents, but the site is plain about what is missing.
+
+- **At sign-up** a pro ticks their trades and the documents they hold. A trade with a ⚑
+  flag is one where South Carolina requires a license or registration.
+- **Uploading** (`/pro/credentials`): each document has a type, number, name on the
+  document, classification, expiry date, and a photo or PDF. The file is private (only the
+  pro and staff can open it). The details are public.
+- **What customers see**: a pro's profile lists every document with its number, holder,
+  expiry date, status, and a link and instructions to check it with the issuer. Each quote
+  shows the same list with a reminder to check before accepting.
+- **The warning**: a pro whose trades need a state license and who has not provided one
+  carries a red "No proof of license provided" label on their profile, in search, and on
+  every quote. An uploaded document clears the warning at once and shows as "Provided, not
+  yet checked" until staff check it.
+- **Staff check** (`/admin/credentials`): open the file, open the issuer's lookup, compare
+  the name, status, classification, and expiry date, then mark it checked or reject it with
+  a note. South Carolina's lookups sit behind a "not a robot" test, so this step is done by
+  a person.
+- **Expiry**: a job runs once a day (`/api/cron/credentials`, scheduled in `vercel.json`).
+  Thirty days before a document expires it emails the pro. After the date it marks the
+  document expired, the warning returns, and staff get a summary email.
+
+All of the rules live in `src/lib/credentials.ts`.
+
+**South Carolina rules built in** (residential work; checked against the S.C. Code and LLR
+on Nov 19, 2026):
+
+| Credential | When the state requires it | Bond | Expires |
+| --- | --- | --- | --- |
+| Residential Builder license (Residential Builders Commission) | Home building, repair, or remodeling over $5,000 | $15,000, always | June 30, even years |
+| Residential Specialty Contractor registration | Jobs over $500 in: roofing, painting and wallpaper, drywall, floor covering, masonry, carpentry, siding, insulation, stucco, solar. Up to three per person | $5,000 for any one job over $5,000 | June 30, odd years |
+| Residential Electrician, Plumber, HVAC Installer and Repairer licenses | Jobs over $500 | $10,000 for any one job over $5,000 | June 30, odd years |
+| General or Mechanical Contractor license (Contractor's Licensing Board) | Jobs over $10,000. Also accepted for residential work in its classification | Optional, by group | October 31: general even years, mechanical odd years |
+| Workers' compensation | Four or more regular employees | | Policy date |
+| General liability insurance | Not required by the state for these licenses | | Policy date |
+| EPA lead-safe firm certification | Federal: paid work disturbing paint in homes built before 1978 | | 5 years |
+| EPA Section 608 card | Federal: handling refrigerant | | Never |
+| Pesticide applicator license (Clemson) | Applying pesticide for pay | $50,000 liability insurance | December 31, yearly |
+
+| Trade on the site | Flagged as needing | Notes |
+| --- | --- | --- |
+| General contracting, Kitchen remodeling, Bathroom remodeling | Residential Builder | |
+| Carpentry, Painting, Drywall, Flooring, Roofing, Masonry & concrete | Specialty registration (or Builder) | Flooring: hardwood is not named by the state |
+| Plumbing, Electrical, Heating & cooling | The trade license (or Mechanical Contractor) | |
+| Handyman, Landscaping, Demolition & hauling, Design & architecture | Nothing | No handyman license exists; limits still apply per trade |
+| Cabinetry, Tile & stone, Decks & fences, Windows & doors | Nothing yet | The state does not name these. See the open questions below |
+
+Sources: [S.C. Code Title 40, Chapter 59](https://www.scstatehouse.gov/code/t40c059.php)
+(residential builders and specialty contractors),
+[Chapter 11](https://www.scstatehouse.gov/code/t40c011.php) (contractors),
+[Regulation 106](https://www.scstatehouse.gov/coderegs/Chapter%20106.pdf),
+[Title 42, Chapter 1](https://www.scstatehouse.gov/code/t42c001.php) (workers' compensation),
+[LLR Residential Builders Commission](https://llr.sc.gov/res/), and
+[LLR Contractor's Licensing Board](https://llr.sc.gov/clb/).
+
+**Open questions to put to LLR** (Residential Builders Commission, before relying on them):
+
+- Which classification covers tile and stone, hardwood flooring, cabinetry, windows and
+  doors, decks and fences, and flatwork concrete. Until answered, these trades are not
+  flagged.
+- The exact expiry date of specialty registrations and trade licenses (June 30 of odd
+  years is taken from the 2025-2027 renewal cycle).
+- Whether LLR's bulk license verification service covers these boards, and its cost.
+
+This is not legal advice. Have a South Carolina lawyer confirm the rules before launch.
 
 ## 5. How money moves
 
@@ -217,12 +332,15 @@ The schema is in `supabase/migrations/`. Files are numbered and applied in order
 | --- | --- |
 | `profiles` | Every user: role, name, admin flag |
 | `pro_profiles` | Public pro details: business, pricing, timeline, ratings, whether listed in search |
+| `pro_credentials` | Licenses, insurance, bonds, and certifications a pro uploaded. Details are public; the file path and staff notes are not |
 | `pro_billing` | Private: the pro's Stripe account, customer and subscription ids, whether they can take payments |
 | `categories`, `pro_categories` | The 20 trades and which pros offer them |
-| `portfolio_photos`, `project_photos` | Photo records (files are in the `photos` storage bucket) |
+| `portfolio_photos`, `project_photos` | Photo records (files are in the `photos` storage bucket). Uploaded documents are in the private `credentials` bucket |
 | `projects` | Customer projects, and whether each is open to all pros (`open_to_pros`) |
 | `quote_requests` | One pro quoting one project. `source` says whether the customer invited the pro or the pro found the project under Find work |
-| `quotes` | A pro's quote; a revision replaces the earlier one |
+| `quotes` | A pro's quote; a revision replaces the earlier one. `breakdown` is the part of the estimate the pro chose to show the customer |
+| `quote_estimates` | Private: the pro's full estimate behind a quote, with costs and markup |
+| `estimate_templates` | Private: a pro's saved estimates |
 | `milestones` | The payment schedule of a quote, with status |
 | `budget_items` | Budget tracker lines; accepted quotes are added automatically |
 | `favorite_subs` | A pro's saved subs |
@@ -232,7 +350,9 @@ The schema is in `supabase/migrations/`. Files are numbered and applied in order
 | `sub_bills` | Bills from a sub to a lead contractor, and their payment |
 | `transfers` | No longer used (left from the earlier hold-and-release design) |
 | `disputes` | Reported problems, the pro's reply and offer, photos from both sides, the outcome |
-| `reviews` | Customer reviews of pros |
+| `reviews` | Customer reviews of pros. Staff can hide one; hidden reviews do not count in ratings |
+| `feature_requests` | Ideas from members, with a status and a staff note |
+| `waitlist` | Pros outside the launch state. Server access only |
 | `sub_ratings` | Contractor ratings of subs (verified) |
 
 Money is stored in cents. Rating averages on `pro_profiles` are kept up to date by database
@@ -322,6 +442,12 @@ works without the webhook. Production needs it.
 2. Put an API key in `RESEND_API_KEY`, a from-address on that domain in `EMAIL_FROM`, and the
    address for staff dispute alerts in `ADMIN_EMAIL`.
 
+### Step 4b: Daily document check
+
+Add `CRON_SECRET` (any long random value) to the hosting environment. Vercel runs
+`/api/cron/credentials` once a day, as scheduled in `vercel.json`, and sends that value
+with each call. Without it the job refuses to run.
+
 ### Step 5: Make yourself an admin
 
 Sign up on the site, then run this in the Supabase SQL editor with your email:
@@ -360,7 +486,8 @@ add that address to Supabase's redirect URLs and to a Stripe webhook endpoint.
 | `STRIPE_PRO_PRICE_ID` | No | A Stripe Price for the membership. If empty, checkout creates the price from `config.ts` |
 | `RESEND_API_KEY` | For email | Resend API key |
 | `EMAIL_FROM` | For email | From-address on a verified domain |
-| `ADMIN_EMAIL` | No | Where staff dispute alerts go |
+| `ADMIN_EMAIL` | No | Where staff alerts go: disputes, documents to check, feature requests |
+| `CRON_SECRET` | For the daily job | Protects `/api/cron/credentials`. Any long random value |
 
 Business settings in `src/lib/config.ts`:
 
@@ -395,12 +522,16 @@ src/lib/email.ts            Notification emails
 src/lib/auth.ts             Who is signed in; customer / pro / admin checks
 src/lib/supabase/           Supabase clients: signed-in user, service-role, browser
 src/lib/stripe.ts           Stripe client
+src/lib/estimate.ts          Estimate maths, the customer's copy, and input cleaning
+src/lib/credentials.ts       Document types, which trades need which, and the state rules
 src/lib/data.ts, format.ts  Shared lookups and formatting
 src/app/actions/            Server actions: every write goes through one of these
-  auth, account, profile, projects, quotes, subs, messages, payments, disputes, reviews
+  auth, account, profile, projects, quotes, subs, messages, payments, disputes, reviews,
+  feedback, admin, credentials
 src/app/                    Pages (see section 3) and the Stripe webhook
 src/components/             Shared UI, navigation, chat, photo uploader and picker,
-                            milestone editor, dispute panel
+                            quote builder, quote breakdown, dispute panel, staff tabs
+supabase/templates/         Branded email templates to paste into Supabase
 src/app/loading.tsx         Placeholder shown at once while a page's data loads
 vercel.json                 Runs the site's servers in Oregon, next to the database
 src/proxy.ts                Keeps the sign-in session fresh on every request
@@ -475,40 +606,47 @@ Nothing in this list is built yet unless it says so.
 
 ### License and insurance verification
 
-- [ ] Let pros upload a **license** (number, state, classification, expiry date) and a
-      **certificate of insurance** (carrier, policy number, coverage amount, expiry date).
-      Store the files privately, not in the public photos bucket.
-- [ ] **Staff review page**: approve or reject each document with a note; check license
-      numbers against the state licensing board's lookup.
-- [ ] Show **"License verified"** and **"Insured"** badges on profiles and in search only
-      while the documents are approved and in date. Add a search filter for them.
-- [ ] **Expiry reminders** by email at 30, 14, and 3 days before a document expires, and on
-      the day. Remove the badge when a document lapses, and tell the pro why.
-- [ ] A daily scheduled job that sends those reminders and expires badges.
-- [ ] Decide whether an expired license or policy **blocks new quotes** or only removes the
-      badge.
-- [ ] Optional: ask the insurer to list Crew Orchard as a certificate holder so it is
-      notified of cancellations; consider a third-party verification service.
-- [ ] Record which trades and job sizes need a license in the launch state.
+Built Nov 19, 2026 (see section 4, "Licenses and insurance").
+
+- [x] Pros upload licenses, registrations, insurance, bonds, and certifications. Files are
+      stored privately.
+- [x] Staff review page: approve or reject each document with a note.
+- [x] Status shown on profiles, in search, and on quotes, with a red warning when required
+      proof is missing. Pros without documents can still join and quote.
+- [x] Expiry reminder by email 30 days before a document expires, and the document is
+      marked expired after the date. Runs daily.
+- [x] South Carolina trades and thresholds recorded in `src/lib/credentials.ts`.
+- [ ] Add `CRON_SECRET` on Vercel so the daily job runs (section 11).
+- [ ] Put the open questions in section 4 to LLR, then flag the trades they confirm.
+- [ ] A search filter for "license checked" pros.
+- [ ] A second reminder at 7 days, and a warning on a quote over $5,000 when no bond is on
+      file.
+- [ ] Decide whether staff re-check active licenses on a schedule, since a license can be
+      suspended before it expires.
+- [ ] Optional: ask insurers to list Crew Orchard as a certificate holder; consider LLR's
+      bulk verification service or a third-party checker as volume grows.
 
 ### Stripe payments and payouts
 
 - [x] Membership checkout and billing portal (tested in Stripe's sandbox).
 - [x] Customer pays the pro directly, with the 5% platform fee (tested in the sandbox).
-- [ ] Add the **publishable key** so Stripe's setup form shows inside the site.
+- [x] The **publishable key** is set on the hosted site, so Stripe's setup form shows inside it.
 - [ ] A test pro **completes Stripe's setup form** end to end, and the site unlocks billing.
-- [ ] **Webhook destinations** on the hosted site (section 11, step 3).
+- [x] **Webhook destinations** on the hosted site (section 11, step 3).
 - [ ] **Your own payouts**: activate the live Stripe account, add the business bank
       account, and choose a payout schedule. Membership fees and the 5% land in the
       platform's Stripe balance and are paid out from there.
-- [ ] Switch to **live keys** and repeat one small real payment and refund.
+- [x] The hosted site runs on **live keys**.
+- [ ] Make one small **real payment and refund** on the hosted site.
 - [ ] Review the **Express dashboard** settings and branding pros will see.
 - [ ] Decide whether to offer **bank transfer (ACH)** to cut card fees on large jobs.
 - [ ] Handle **card chargebacks**, which happen on the pro's Stripe account.
 - [x] Decided: the customer pays the lead, and the lead pays subs through sub bills. No
       automatic split.
 
-### Project management for pros
+### Later: project management for pros
+
+Part of the long-term vision. Not started until the first city is live and earning.
 
 - [ ] **Job calendar**: start and end dates per job and per milestone, across all jobs.
 - [ ] **Task lists** per job, assignable to subs, with due dates.
@@ -520,8 +658,22 @@ Nothing in this list is built yet unless it says so.
 - [ ] **Materials and expense tracking** against the quote, to show job profit.
 - [ ] **Time tracking** for hourly work.
 - [ ] **Punch list and final walkthrough** before the last bill.
-- [ ] **Estimate templates** for common jobs, to quote faster.
+- [x] **Estimate builder and templates** (built Nov 19, 2026; see section 4).
 - [ ] **Job status board**: leads, quoted, scheduled, in progress, waiting on payment, done.
+
+### Later: parts and materials ordering
+
+Part of the long-term vision. Not started until the first city is live and earning.
+
+- [ ] **Materials list** built from a quote or a job, with quantities.
+- [ ] **Supplier catalog and pricing**: decide which suppliers to work with (national
+      chains, local yards) and how prices and stock are fetched.
+- [ ] **Order inside the job**: place the order, choose delivery to site or pickup, and
+      keep the receipt with the job.
+- [ ] **Cost tracking**: ordered materials count against the quote to show job profit.
+- [ ] **Delivery tracking** and alerts when an order is delayed.
+- [ ] Decide the **business model**: supplier referral fees, a margin on orders, or a
+      feature of a higher membership tier.
 
 ### Admin features
 
@@ -534,21 +686,24 @@ Nothing in this list is built yet unless it says so.
       insurance document, a failed membership payment, or reports from customers) pause
       the pro and put them in a staff review queue. An admin then restores or removes them.
 - [ ] A **log of admin actions**: who did what, to which account, and when.
-- [ ] **Review moderation**: hide or remove a review that breaks the content policy.
-- [ ] A **forgotten-password** link on the sign-in page.
+- [x] **Review moderation**: staff hide or restore a customer review, with a reason. Sub
+      ratings are not covered yet.
+- [x] A **forgotten-password** link on the sign-in page. Paste
+      `supabase/templates/reset-password.html` into Supabase for a branded email.
 
 ### Feedback
 
-- [ ] A place where customers and pros can **request features**: a short form on the site
-      (what they want and why), saved with who asked, and a staff page to read, sort, and
-      mark requests as planned, done, or declined.
+- [x] A place where customers and pros can **request features** (`/feedback`), with a
+      staff page to set each request to planned, done, or not planned and reply.
 
 ### Launch area and growth
 
-- [ ] State on the site that Crew Orchard is **starting in South Carolina** and will soon
-      expand to other states.
-- [ ] A **"Join the waitlist" button for pros outside South Carolina**, which collects their
-      name, email, trade, and state so they can be told when their state opens.
+- [x] The site says Crew Orchard is **open in South Carolina first**,
+      with more states coming (home page banner, pro sign-up, footer). The states are
+      `LAUNCH_STATES` in `src/lib/config.ts`.
+- [x] A **waitlist for pros outside the launch states** (`/waitlist`), listed for staff at
+      `/admin/waitlist`.
+- [ ] Email the waitlist when a state opens.
 - [ ] Create a **service email** address (for example `support@creworchard.com`) for
       customer and pro questions, and show it on the site and in emails.
 - [ ] Build out the **go-to-market strategy**: how the first pros and customers in South
@@ -557,7 +712,7 @@ Nothing in this list is built yet unless it says so.
 ### Before launch
 
 - [ ] Check contractor licensing rules for the launch state.
-- [ ] Remove any test accounts and data.
+- [x] Remove any test accounts and data (done Nov 19, 2026; repeat after any later testing).
 - [ ] Real email delivery with a verified sending domain.
 - [ ] An automated test suite.
 

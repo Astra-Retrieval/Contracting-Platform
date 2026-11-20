@@ -1,8 +1,10 @@
+import Link from "next/link";
 import { addPortfolioPhoto, deletePortfolioPhoto, updateProProfile } from "@/app/actions/profile";
 import { PhotoUploader } from "@/components/photo-uploader";
 import { SubmitButton } from "@/components/submit-button";
 import { ButtonLink, Card, Field, Flash, PageHeader, SectionTitle, inputCls, type SearchParams } from "@/components/ui";
 import { requirePro } from "@/lib/auth";
+import { tradeNeedsDocs } from "@/lib/credentials";
 import { getCategories } from "@/lib/data";
 import { photoUrl } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
@@ -65,9 +67,22 @@ export default async function ProProfilePage({ searchParams }: { searchParams: S
                     className="size-4 accent-brand-600"
                   />
                   {c.name}
+                  {tradeNeedsDocs(c.slug) && (
+                    <span title="South Carolina requires a license or registration for this trade" className="text-red-700">
+                      ⚑
+                    </span>
+                  )}
                 </label>
               ))}
             </div>
+            <p className="mt-2 text-xs text-stone-500">
+              <span className="text-red-700">⚑</span> South Carolina requires a license or registration for
+              this trade. Add yours under{" "}
+              <Link href="/pro/credentials" className="font-semibold text-brand-700 underline">
+                Licenses and insurance
+              </Link>
+              .
+            </p>
           </fieldset>
         </Card>
 
@@ -119,14 +134,14 @@ export default async function ProProfilePage({ searchParams }: { searchParams: S
             <Field label="Years in business">
               <input name="years_experience" inputMode="numeric" defaultValue={num(pro?.years_experience)} className={inputCls} />
             </Field>
-            <Field label="License number" hint="Shown on your profile. Leave blank if not applicable.">
-              <input name="license_number" defaultValue={pro?.license_number ?? ""} className={inputCls} />
-            </Field>
           </div>
-          <label className="flex items-center gap-2 text-sm text-stone-700">
-            <input type="checkbox" name="insured" defaultChecked={pro?.insured ?? false} className="size-4 accent-brand-600" />
-            I carry liability insurance
-          </label>
+          <p className="text-sm text-stone-600">
+            Licenses, insurance, and other documents are added on their own page, where you upload
+            proof and customers can check it.{" "}
+            <Link href="/pro/credentials" className="font-semibold text-brand-700 underline">
+              Go to Licenses and insurance
+            </Link>
+          </p>
         </Card>
 
         <div className="flex justify-end">
